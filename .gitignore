@@ -1,0 +1,21 @@
+# local toolchain + build output
+.tools/
+bin/
+obj/
+artifacts/
+*.user
+*.suo
+.vs/
+
+# spike measurement scratch (kept out of git; results are summarised in docs/spikes)
+spikes/**/out/
+spikes/**/*.log
+
+# local Claude Code settings (spike 1 uses a temporary one)
+.claude/settings.local.json
+
+# never commit provider material
+*.sqlite
+*.sqlite-*
+auth.json
+*.pfx

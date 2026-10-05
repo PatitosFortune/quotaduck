@@ -1,0 +1,6 @@
+{
+  "statusLine": {
+    "type": "command",
+    "command": "powershell -NoProfile -ExecutionPolicy Bypass -File \"<repo-root>/spikes/spike1-claude-statusline/probe.ps1\""
+  }
+}

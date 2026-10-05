@@ -1,0 +1,9 @@
+<Window x:Class="WpfProto.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="QuotaDuck spike" Width="260" Height="110" ResizeMode="NoResize" WindowStyle="ToolWindow" ShowInTaskbar="False">
+    <Grid Background="#FF0B3A4A">
+        <Rectangle Fill="#FF2FA3C7" Height="40" VerticalAlignment="Bottom" />
+        <TextBlock Text="38% left" Foreground="White" FontSize="22" Margin="12" />
+    </Grid>
+</Window>
