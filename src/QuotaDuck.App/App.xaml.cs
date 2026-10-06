@@ -22,10 +22,13 @@ public partial class App : Application
         }
 
         var service = new CoordinatorService(QuotaCoordinatorFactory.CreateDefault());
-        var vm = new ShellViewModel(service, new DispatcherTicker(), TimeProvider.System, TimeZoneInfo.Local)
-        {
-            ReducedMotion = !SystemParameters.ClientAreaAnimation,
-        };
+        var vm = new ShellViewModel(
+            service,
+            new DispatcherTicker(),
+            TimeProvider.System,
+            TimeZoneInfo.Local,
+            new DispatcherTicker(TimeSpan.FromMilliseconds(80)),
+            () => !SystemParameters.ClientAreaAnimation);                       // reduced motion = Windows "Show animations" off
 
         // The flyout window is created lazily on first Show: a tray-only start pays nothing for WPF layout.
         _controller = new ShellController(

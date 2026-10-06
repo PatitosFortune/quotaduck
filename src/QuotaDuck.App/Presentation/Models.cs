@@ -1,3 +1,5 @@
+using QuotaDuck.Art;
+
 namespace QuotaDuck.App.Presentation;
 
 /// <summary>Visual emphasis only. Every state is ALSO spelled out in text, so colour is never the only channel.</summary>
@@ -19,7 +21,12 @@ public sealed record WindowRowModel(
     string ResetText,
     string AgeText,
     string AccessibleName,
-    Tone Tone);
+    Tone Tone,
+    GaugeScene Gauge)
+{
+    /// <summary>Reset countdown and age on one line (keeps the flyout short): "Resets in 3 h (13:00) · Last changed 3 min ago".</summary>
+    public string Detail => string.Join(" · ", new[] { ResetText, AgeText }.Where(s => s.Length > 0));
+}
 
 public sealed record RefreshButtonModel(bool Enabled, string Text, string? Hint);
 
@@ -30,7 +37,9 @@ public sealed record ProviderCardModel(
     Tone Tone,
     IReadOnlyList<WindowRowModel> Windows,
     RefreshButtonModel? Refresh,
-    string? Footer);
+    string? Footer,
+    PondScene Pond,
+    string PondDescription);
 
 public sealed record ShellPresentation(
     ProviderCardModel Claude,

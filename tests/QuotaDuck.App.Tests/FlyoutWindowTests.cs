@@ -6,6 +6,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using QuotaDuck.App.Shell;
+using QuotaDuck.Art;
 using QuotaDuck.App.Views;
 using QuotaDuck.Coordinator;
 using QuotaDuck.Core;
@@ -207,15 +208,15 @@ public class FlyoutWindowTests
             Assert.Contains("42% used", live);
             Assert.Contains("58% left", live);
             Assert.Contains("31% used", live);
-            Assert.Contains("Resets in 3 h (13:00)", live);
+            Assert.Contains(live, x => x == "Resets in 3 h (13:00) · Last changed 3 min ago");
             Assert.Contains("Reported by Claude Code", live);
             Assert.Contains("Up to date", live);
-            Assert.Contains("Claude numbers come from Claude Code terminal sessions only.", live);
+            Assert.Contains("Claude reports only from terminal Claude Code sessions.", live);
         });
     }
 
     [Fact]
-    public void Accessibility_NamesOnTheWindowProgressBarsAndButton()
+    public void Accessibility_NamesOnTheWindowPondsAndButton_GaugesAreDecorative()
     {
         Sta.Run(() =>
         {
@@ -225,12 +226,63 @@ public class FlyoutWindowTests
             ((IFlyout)w).Show();
             Sta.Flush();
             Assert.Equal("QuotaDuck quota", AutomationProperties.GetName(w));
-            ProgressBar[] bars = Sta.Descendants<ProgressBar>(w).ToArray();
-            Assert.Equal(4, bars.Length);                                               // Claude 5h + weekly (one with no data), Codex 5h + weekly
-            Assert.All(bars, p => Assert.False(string.IsNullOrWhiteSpace(AutomationProperties.GetName(p))));
-            Assert.Contains(bars, p => AutomationProperties.GetName(p).StartsWith("Claude 5-hour: 42% used", StringComparison.Ordinal));
+            PixelImage[] images = Sta.Descendants<PixelImage>(w).ToArray();
+            Assert.Equal(6, images.Length);                                             // 2 ponds + 4 gauges (Claude 5h + weekly, Codex 5h + weekly)
+            PixelImage[] ponds = images.Where(i => !i.Decorative).ToArray();
+            PixelImage[] gauges = images.Where(i => i.Decorative).ToArray();
+            Assert.Equal(2, ponds.Length);
+            Assert.Equal(4, gauges.Length);
+            Assert.All(ponds, p => Assert.False(string.IsNullOrWhiteSpace(AutomationProperties.GetName(p))));
+            Assert.Contains(ponds, p => AutomationProperties.GetName(p).StartsWith("Claude pond: 58 percent of the water is left", StringComparison.Ordinal));
+            Assert.Contains(ponds, p => AutomationProperties.GetName(p).StartsWith("Codex pond: 65 percent", StringComparison.Ordinal));
+            // decorative gauges are not exposed to assistive technology; the row text beside them carries the numbers and has an automation name
+            Assert.All(gauges, g => Assert.False(System.Windows.Automation.Peers.UIElementAutomationPeer.CreatePeerForElement(g).IsContentElement()));
+            Assert.All(ponds, g => Assert.True(System.Windows.Automation.Peers.UIElementAutomationPeer.CreatePeerForElement(g).IsContentElement()));
             Assert.Equal("Refresh Codex quota", AutomationProperties.GetName(RefreshButton(w)));
             Assert.True(KeyboardNavigation.GetTabNavigation(w) == KeyboardNavigationMode.Cycle);
+        });
+    }
+
+    [Fact]
+    public void PixelArt_IsDrawnCrisply_IntegerScaled_FrozenBitmaps_NearestNeighbour()
+    {
+        Sta.Run(() =>
+        {
+            (FlyoutWindow w, ShellViewModel vm, FakeService svc, _) = Make();
+            svc.Current = Snap.Make(Snap.T0, codex: Snap.Codex(Snap.T0));
+            vm.Refresh();
+            ((IFlyout)w).Show();
+            Sta.Flush();
+            double dpi = VisualTreeHelper.GetDpi(w).DpiScaleX;
+            foreach (PixelImage img in Sta.Descendants<PixelImage>(w))
+            {
+                var bmp = Assert.IsAssignableFrom<System.Windows.Media.Imaging.BitmapSource>(img.Source);
+                Assert.True(bmp.IsFrozen);
+                Assert.Equal(System.Windows.Media.BitmapScalingMode.NearestNeighbor, RenderOptions.GetBitmapScalingMode(img));
+                int logical = img.Scene!.Width;
+                Assert.Equal(0, bmp.PixelWidth % logical);                                // a whole number of device pixels per art pixel
+                Assert.Equal(PixelScale.Choose(logical, img.TargetWidth, dpi) * logical, bmp.PixelWidth);
+                Assert.Equal(bmp.PixelWidth / dpi, img.ActualWidth, 0.6);                 // shown 1:1 in device pixels
+            }
+        });
+    }
+
+    [Fact]
+    public void ARealPond_IsPaintedInTheBitmap_WaterWhereThePresenterSaidItWas()
+    {
+        Sta.Run(() =>
+        {
+            (FlyoutWindow w, ShellViewModel vm, FakeService svc, _) = Make();
+            svc.Current = Snap.Make(Snap.T0, new ClaudeState(Snap.Rec(25, Snap.T0.AddHours(3), Snap.T0.AddMinutes(-1)), null));
+            vm.Refresh();
+            ((IFlyout)w).Show();
+            Sta.Flush();
+            PixelImage pond = Sta.Descendants<PixelImage>(w).First(i => !i.Decorative);
+            var bmp = (System.Windows.Media.Imaging.BitmapSource)pond.Source;
+            var px = new uint[bmp.PixelWidth * bmp.PixelHeight];
+            bmp.CopyPixels(px, bmp.PixelWidth * 4, 0);
+            Assert.Contains(Palette.Standard[Ink.Water], px);
+            Assert.Contains(Palette.Standard[Ink.Yellow], px);                          // the duck
         });
     }
 
@@ -278,6 +330,9 @@ public class FlyoutWindowTests
             ("1-waiting-and-not-read", Snap.Make(Snap.T0)),
             ("2-both-fresh", Snap.Make(Snap.T0, fresh, Snap.Codex(Snap.T0.AddMinutes(-1)))),
             ("3-claude-elapsed-codex-cooldown", Snap.Make(Snap.T0, elapsed, Snap.Codex(Snap.T0.AddMinutes(-1)), allowed: false, allowedAt: Snap.T0.AddSeconds(41))),
+            ("5-claude-sleeping-codex-shallow", Snap.Make(Snap.T0, new ClaudeState(Snap.Rec(30, Snap.T0.AddHours(1), Snap.T0.AddHours(-2).AddMinutes(-10)), Snap.Rec(55, Snap.T0.AddDays(3), Snap.T0.AddHours(-3))), Snap.Codex(Snap.T0.AddMinutes(-2), used5h: 88, usedWk: 40))),
+            ("6-codex-error-no-data-claude-reading", Snap.Make(Snap.T0, new ClaudeState(Snap.Rec(12, Snap.T0.AddHours(4), Snap.T0.AddMinutes(-2)), Snap.Rec(60, Snap.T0.AddDays(3), Snap.T0.AddMinutes(-2))), codexIssue: ProviderIssue.CodexNotInstalled, attempt: new ProviderAttempt(Snap.T0, ProviderErrorKind.NotFound))),
+            ("7-codex-reading", Snap.Make(Snap.T0, new ClaudeState(Snap.Rec(42, Snap.T0.AddHours(3), Snap.T0.AddMinutes(-3)), Snap.Rec(12, Snap.T0.AddDays(4), Snap.T0.AddMinutes(-3))), Snap.Codex(Snap.T0.AddMinutes(-12)), reading: true, allowed: false)),
             ("4-codex-failed-claude-quiet", Snap.Make(Snap.T0, new ClaudeState(Snap.Rec(42, Snap.T0.AddHours(1), Snap.T0.AddHours(-2).AddMinutes(-10)), null), Snap.Codex(Snap.T0.AddMinutes(-15)), codexIssue: ProviderIssue.TemporaryProviderFailure, attempt: new ProviderAttempt(Snap.T0.AddMinutes(-1), ProviderErrorKind.Timeout))),
         ];
         foreach ((string name, AppSnapshot snapshot) in cases)

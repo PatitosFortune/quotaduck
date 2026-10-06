@@ -1,8 +1,6 @@
 using System.Drawing;
 using System.IO;
 using System.Windows;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using Microsoft.Win32;
 using WinForms = System.Windows.Forms;
@@ -71,9 +69,10 @@ public sealed class WpfLifetime : IAppLifetime
     public void Shutdown() => System.Windows.Application.Current?.Shutdown();
 }
 
-/// <summary>1 s ticker that exists only while started (the flyout is visible).</summary>
-public sealed class DispatcherTicker : IUiTicker
+/// <summary>A ticker that exists only while started (the flyout is visible): 1 s by default, 80 ms for the short refill tween.</summary>
+public sealed class DispatcherTicker(TimeSpan? interval = null) : IUiTicker
 {
+    private readonly TimeSpan _interval = interval ?? TimeSpan.FromSeconds(1);
     private DispatcherTimer? _timer;
 
     public bool IsRunning => _timer is { IsEnabled: true };
@@ -81,7 +80,7 @@ public sealed class DispatcherTicker : IUiTicker
     public void Start(Action tick)
     {
         Stop();
-        _timer = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromSeconds(1) };
+        _timer = new DispatcherTimer(DispatcherPriority.Background) { Interval = _interval };
         _timer.Tick += (_, _) => tick();
         _timer.Start();
     }
@@ -93,21 +92,32 @@ public sealed class DispatcherTicker : IUiTicker
     }
 }
 
-/// <summary>Tray icon via WinForms NotifyIcon: left click toggles, menu has Open and Exit, tooltip only changes when its text changes.</summary>
+/// <summary>
+/// Tray icon via WinForms NotifyIcon: left click toggles, the menu has Open and Exit, the tooltip only changes when its text changes.
+/// The context menu is created on the first right-click (building a ToolStrip loads GDI+ and costs ~11 MB of working set that a tray that is
+/// never right-clicked should not pay).
+/// </summary>
 public sealed class WinFormsTray : ITray
 {
     private readonly WinForms.NotifyIcon _icon;
-    private readonly WinForms.ContextMenuStrip _menu;
     private readonly Icon _image;
+    private WinForms.ContextMenuStrip? _menu;
     private string _tooltip = string.Empty;
 
     public WinFormsTray(string initialTooltip)
     {
-        _image = PlaceholderIcon.Create();
-        _menu = new WinForms.ContextMenuStrip();
-        _menu.Items.Add("Open", null, (_, _) => OpenRequested?.Invoke());
-        _menu.Items.Add("Exit", null, (_, _) => ExitRequested?.Invoke());
-        _icon = new WinForms.NotifyIcon { Icon = _image, ContextMenuStrip = _menu, Visible = true };
+        _image = TrayIconResource.Load();
+        _icon = new WinForms.NotifyIcon { Icon = _image, Visible = true };
+        _icon.MouseDown += (_, e) =>
+        {
+            if (e.Button == WinForms.MouseButtons.Right && _menu is null)
+            {
+                _menu = new WinForms.ContextMenuStrip();
+                _menu.Items.Add("Open", null, (_, _) => OpenRequested?.Invoke());
+                _menu.Items.Add("Exit", null, (_, _) => ExitRequested?.Invoke());
+                _icon.ContextMenuStrip = _menu;                                  // assigned before the button-up that shows it
+            }
+        };
         _icon.MouseClick += (_, e) =>
         {
             if (e.Button == WinForms.MouseButtons.Left)
@@ -140,60 +150,34 @@ public sealed class WinFormsTray : ITray
     {
         _icon.Visible = false;
         _icon.Dispose();
-        _menu.Dispose();
+        _menu?.Dispose();
         _image.Dispose();
     }
 }
 
-/// <summary>A placeholder tray icon (yellow disc), rendered once at 16 and 32 px into an in-memory ICO — no native handles to leak.</summary>
-public static class PlaceholderIcon
+/// <summary>
+/// The static tray icon: an .ico generated at development time by tools/QuotaDuck.AssetGen (deterministic) and embedded in this assembly.
+/// It never touches WPF imaging/rendering, so no Direct3D or GPU driver is pulled in.
+/// </summary>
+public static class TrayIconResource
 {
-    public static Icon Create()
-    {
-        byte[] p16 = Png(16), p32 = Png(32);
-        using var ms = new MemoryStream();
-        using var w = new BinaryWriter(ms);
-        w.Write((short)0);                                                      // reserved
-        w.Write((short)1);                                                      // type: icon
-        w.Write((short)2);                                                      // two images
-        int offset = 6 + 2 * 16;
-        foreach ((int size, byte[] data) in new[] { (16, p16), (32, p32) })
-        {
-            w.Write((byte)size);
-            w.Write((byte)size);
-            w.Write((byte)0);
-            w.Write((byte)0);
-            w.Write((short)1);
-            w.Write((short)32);
-            w.Write(data.Length);
-            w.Write(offset);
-            offset += data.Length;
-        }
+    public const string ResourceName = "quotaduck.ico";
 
-        w.Write(p16);
-        w.Write(p32);
-        w.Flush();
-        ms.Position = 0;
-        return new Icon(ms);
+    /// <summary>The raw embedded .ico (compared byte for byte with the generator's output in the tests).</summary>
+    public static byte[] Bytes()
+    {
+        using Stream s = typeof(TrayIconResource).Assembly.GetManifestResourceStream(ResourceName)
+            ?? throw new InvalidOperationException("tray icon resource missing");
+        using var ms = new MemoryStream();
+        s.CopyTo(ms);
+        return ms.ToArray();
     }
 
-    private static byte[] Png(int size)
+    public static Icon Load()
     {
-        var dv = new DrawingVisual();
-        using (DrawingContext dc = dv.RenderOpen())
-        {
-            double r = size / 2.0;
-            dc.DrawEllipse(new SolidColorBrush(System.Windows.Media.Color.FromRgb(0xF2, 0xC1, 0x2E)), new System.Windows.Media.Pen(new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x7A, 0x5B, 0x00)), size / 16.0), new System.Windows.Point(r, r), r - size / 10.0, r - size / 10.0);
-            dc.DrawEllipse(new SolidColorBrush(System.Windows.Media.Color.FromRgb(0xE8, 0x7D, 0x1E)), null, new System.Windows.Point(r * 1.55, r * 1.05), size / 8.0, size / 12.0);
-        }
-
-        var bmp = new RenderTargetBitmap(size, size, 96, 96, PixelFormats.Pbgra32);
-        bmp.Render(dv);
-        var enc = new PngBitmapEncoder();
-        enc.Frames.Add(BitmapFrame.Create(bmp));
-        using var ms = new MemoryStream();
-        enc.Save(ms);
-        return ms.ToArray();
+        using Stream s = typeof(TrayIconResource).Assembly.GetManifestResourceStream(ResourceName)
+            ?? throw new InvalidOperationException("tray icon resource missing");
+        return new Icon(s, WinForms.SystemInformation.SmallIconSize);
     }
 }
 

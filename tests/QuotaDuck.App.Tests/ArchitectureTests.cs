@@ -33,6 +33,7 @@ public class ArchitectureTests
         string[] refs = App.GetReferencedAssemblies().Select(r => r.Name!).ToArray();
         Assert.Contains("QuotaDuck.Coordinator", refs);
         Assert.Contains("QuotaDuck.Core", refs);
+        Assert.Contains("QuotaDuck.Art", refs);
         Assert.DoesNotContain("QuotaDuck.Codex", refs);                                   // no direct Codex interaction from the UI
         Assert.DoesNotContain("QuotaDuck.Bridge", refs);                                  // no Claude state access/writes from the UI
         string[] forbidden = ["System.Net", "System.Diagnostics.Process", "Microsoft.Win32.Registry", "System.Data", "System.Management", "System.Security.Cryptography", "System.IO.Pipes"];
@@ -43,7 +44,7 @@ public class ArchitectureTests
     public void WpfAndWinForms_AreReferencedByTheAppProjectOnly()
     {
         string[] ui = ["PresentationFramework", "PresentationCore", "WindowsBase", "System.Windows.Forms", "System.Drawing", "System.Xaml"];
-        foreach (string dll in new[] { typeof(QuotaDuck.Core.WindowKey), typeof(QuotaDuck.Coordinator.QuotaCoordinator), typeof(QuotaDuck.Codex.CodexQuotaReader) }.Select(t => t.Assembly.Location))
+        foreach (string dll in new[] { typeof(QuotaDuck.Core.WindowKey), typeof(QuotaDuck.Coordinator.QuotaCoordinator), typeof(QuotaDuck.Codex.CodexQuotaReader), typeof(QuotaDuck.Art.PondScene) }.Select(t => t.Assembly.Location))
         {
             string[] refs = Assembly.LoadFrom(dll).GetReferencedAssemblies().Select(r => r.Name!).ToArray();
             Assert.DoesNotContain(refs, r => ui.Any(u => r.StartsWith(u, StringComparison.Ordinal)));

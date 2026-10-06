@@ -23,6 +23,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\QuotaDuck.Core\QuotaDuck.Core.csproj" />
     <ProjectReference Include="..\..\src\QuotaDuck.Coordinator\QuotaDuck.Coordinator.csproj" />
+    <ProjectReference Include="..\..\src\QuotaDuck.Art\QuotaDuck.Art.csproj" />
     <ProjectReference Include="..\..\src\QuotaDuck.App\QuotaDuck.App.csproj" />
     <ProjectReference Include="..\..\src\QuotaDuck.Bridge\QuotaDuck.Bridge.csproj" />
     <ProjectReference Include="..\..\src\QuotaDuck.Codex\QuotaDuck.Codex.csproj" />

@@ -35,7 +35,7 @@ public class PresenterTests
             Assert.Equal("No data", w.StateText);
             Assert.DoesNotContain("0%", w.PercentText);
         });
-        Assert.Contains("terminal sessions only", p.Claude.Footer);
+        Assert.Contains("only from terminal Claude Code sessions", p.Claude.Footer);
         Assert.Null(p.Claude.Refresh);                                                    // Claude has nothing to refresh
     }
 

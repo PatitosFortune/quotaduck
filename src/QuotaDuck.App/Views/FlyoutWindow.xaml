@@ -16,27 +16,23 @@
 
         <!-- one row per window the provider really reports; nothing is padded to look symmetric -->
         <DataTemplate x:Key="WindowRow">
-            <StackPanel Margin="0,6,0,0" AutomationProperties.Name="{Binding AccessibleName}">
+            <StackPanel Margin="0,5,0,0" AutomationProperties.Name="{Binding AccessibleName}">
                 <DockPanel>
                     <TextBlock Text="{Binding StateText}" DockPanel.Dock="Right" Foreground="{Binding Tone, Converter={StaticResource ToneBrush}}" FontWeight="SemiBold" />
                     <TextBlock Text="{Binding Label}" FontWeight="SemiBold" />
                 </DockPanel>
-                <ProgressBar Height="10" Minimum="0" Maximum="1" Margin="0,3,0,3"
-                             Value="{Binding Fraction, Mode=OneWay, TargetNullValue=0}"
-                             Foreground="{Binding Tone, Converter={StaticResource ToneBrush}}"
-                             IsEnabled="{Binding Fraction, Converter={StaticResource Show}, ConverterParameter=bool}"
-                             AutomationProperties.Name="{Binding AccessibleName}" />
+                <views:PixelImage Scene="{Binding Gauge}" TargetWidth="240" HorizontalAlignment="Left" Margin="0,3,0,3"
+                                  Decorative="True" />
                 <DockPanel>
                     <TextBlock Text="{Binding RemainingText}" DockPanel.Dock="Right" />
                     <TextBlock Text="{Binding PercentText}" />
                 </DockPanel>
-                <TextBlock Text="{Binding ResetText}" Visibility="{Binding ResetText, Converter={StaticResource Show}}" Opacity="0.85" />
-                <TextBlock Text="{Binding AgeText}" Visibility="{Binding AgeText, Converter={StaticResource Show}}" Opacity="0.75" FontSize="11.5" />
+                <TextBlock Text="{Binding Detail}" TextWrapping="Wrap" Opacity="0.85" FontSize="12" />
             </StackPanel>
         </DataTemplate>
 
         <DataTemplate x:Key="ProviderCard">
-            <Border BorderBrush="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}" BorderThickness="1" CornerRadius="4" Padding="10" Margin="0,0,0,10">
+            <Border BorderBrush="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}" BorderThickness="1" CornerRadius="4" Padding="8" Margin="0,0,0,8">
                 <StackPanel>
                     <DockPanel>
                         <Button x:Name="RefreshButton" DockPanel.Dock="Right" MinWidth="96" Padding="8,2" Margin="8,0,0,0"
@@ -48,15 +44,17 @@
                     </DockPanel>
                     <TextBlock Text="{Binding Headline}" TextWrapping="Wrap" Margin="0,2,0,0" FontWeight="SemiBold"
                                Foreground="{Binding Tone, Converter={StaticResource ToneBrush}}" />
+                    <views:PixelImage Scene="{Binding Pond}" TargetWidth="300" HorizontalAlignment="Center" Margin="0,6,0,0"
+                                      AutomationProperties.Name="{Binding PondDescription}" />
                     <TextBlock Text="{Binding Note}" TextWrapping="Wrap" Opacity="0.85" Margin="0,2,0,0" Visibility="{Binding Note, Converter={StaticResource Show}}" />
                     <ItemsControl ItemsSource="{Binding Windows}" ItemTemplate="{StaticResource WindowRow}" IsTabStop="False" />
-                    <TextBlock Text="{Binding Footer}" TextWrapping="Wrap" Opacity="0.7" FontSize="11.5" Margin="0,8,0,0" Visibility="{Binding Footer, Converter={StaticResource Show}}" />
+                    <TextBlock Text="{Binding Footer}" TextWrapping="Wrap" Opacity="0.7" FontSize="11.5" Margin="0,6,0,0" Visibility="{Binding Footer, Converter={StaticResource Show}}" />
                 </StackPanel>
             </Border>
         </DataTemplate>
     </Window.Resources>
 
-    <StackPanel Margin="12">
+    <StackPanel Margin="10">
         <ContentControl Content="{Binding Current.Claude}" ContentTemplate="{StaticResource ProviderCard}" IsTabStop="False" />
         <ContentControl Content="{Binding Current.Codex}" ContentTemplate="{StaticResource ProviderCard}" IsTabStop="False" />
         <TextBlock Text="{Binding Current.RefreshFeedback}" TextWrapping="Wrap" Visibility="{Binding Current.RefreshFeedback, Converter={StaticResource Show}}"

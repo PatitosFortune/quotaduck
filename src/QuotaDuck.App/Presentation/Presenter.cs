@@ -1,3 +1,4 @@
+using QuotaDuck.Art;
 using QuotaDuck.Coordinator;
 using QuotaDuck.Core;
 
@@ -65,7 +66,9 @@ public static class Presenter
             tone,
             rows,
             Refresh: null,                                                  // there is nothing to refresh: Claude only reports when Claude Code runs
-            Footer: "Claude numbers come from Claude Code terminal sessions only.");
+            Footer: "Claude reports only from terminal Claude Code sessions.",
+            Pond: PondMapping.For(p, faceRight: true),
+            PondDescription: PondMapping.Describe("Claude", p));
     }
 
     // ---------------- Codex (pull: manual refresh) ----------------
@@ -113,7 +116,7 @@ public static class Presenter
         }
 
         RefreshButtonModel? refresh = p.Issue == ProviderIssue.NotConfigured ? null : RefreshButton(s);
-        return new ProviderCardModel("Codex", headline, note, tone, rows, refresh, Footer: null);
+        return new ProviderCardModel("Codex", headline, note, tone, rows, refresh, Footer: null, Pond: PondMapping.For(p, faceRight: false), PondDescription: PondMapping.Describe("Codex", p));
     }
 
     private static RefreshButtonModel RefreshButton(AppSnapshot s)
@@ -181,7 +184,7 @@ public static class Presenter
             WindowState.Fresh => Tone.Good,
             WindowState.Quiet => Tone.Neutral,
             _ => Tone.Muted,
-        });
+        }, PondMapping.GaugeFor(w));
     }
 
     private static Tone ToneOf(ProviderRollup r) => r switch

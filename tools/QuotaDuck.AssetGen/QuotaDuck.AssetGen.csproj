@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- DEV TOOL: regenerates the committed pixel assets (tray icon) and optional review PNGs from the Art library. Never shipped. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>QuotaDuck.AssetGen</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\QuotaDuck.Art\QuotaDuck.Art.csproj" />
+  </ItemGroup>
+</Project>

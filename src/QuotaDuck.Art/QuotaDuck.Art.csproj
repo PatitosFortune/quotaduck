@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>QuotaDuck.Art</RootNamespace>
+    <AssemblyName>QuotaDuck.Art</AssemblyName>
+    <IsAotCompatible>true</IsAotCompatible>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+  <!--
+    The pixel art, generated deterministically in code: palette, shapes, duck sprites, pond and gauge scenes, PNG/ICO encoders.
+    Pure BCL: no WPF, no System.Drawing, no I/O, no clock. The WPF shell only turns an IndexedImage into a WriteableBitmap.
+  -->
+</Project>
