@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>QuotaDuck.Core</RootNamespace>
+    <AssemblyName>QuotaDuck.Core</AssemblyName>
+    <IsAotCompatible>true</IsAotCompatible>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+  <!-- Pure logic: no I/O, no clock reads, no network, no Windows APIs, no third-party packages. -->
+</Project>

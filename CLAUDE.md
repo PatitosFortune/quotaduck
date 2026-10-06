@@ -35,7 +35,7 @@ QuotaDuck is a tiny Windows 11 tray/widget that shows **Claude** and **ChatGPT/C
 **Claude surface coverage — v1 baseline limitation (Step-0 Spike 1; state it plainly in the product)**
 - Terminal Claude Code (CLI, incl. VS Code's integrated terminal): status-line hook **works**.
 - VS Code Claude Code panel (`claude-vscode`): tested; **does not fire** the status-line hook.
-- Claude Desktop Code tab: **inconclusive** pending one clean retest (result recorded in `docs/spikes/STEP0-RESULTS.md`).
+- Claude Desktop Code tab: **unsupported (observed)** — one clean retest, session verified at `cwd = quotaduck-app` with the probe config present, produced zero status-line events (see `docs/spikes/STEP0-RESULTS.md`). Residual uncertainty: the folder was moved mid-session.
 - Therefore Claude quota is observable **only while a supported Claude Code terminal session reports**. Usage generated elsewhere (panel, Desktop, claude.ai web) may stay invisible until a terminal session reports again.
 - **Never present missing Claude observations as 0%.** No data ⇒ "Waiting for Claude Code in a terminal"; elapsed window ⇒ "waiting for next report"; always show ages.
 
@@ -44,6 +44,12 @@ QuotaDuck is a tiny Windows 11 tray/widget that shows **Claude** and **ChatGPT/C
 **Product**
 - **One duck per provider pond.** Provider truth over visual symmetry: show the windows each provider really reports; never invent symmetry; never fake freshness; numbers are always visible; colour is never the only channel; honour reduced-motion.
 - Do not build polished UI/art until the owner approves that step.
+
+## Layout and commands
+- `src/QuotaDuck.Core` — pure logic (models, §34 freshness/reset derivation, Claude merge, Codex read → observations). No I/O, no clock reads (`now` is always a parameter), BCL only, AOT-compatible. State table: `docs/core/FRESHNESS-STATE-TABLE.md`.
+- `tests/QuotaDuck.Core.Tests` — xunit (dev-only); fixtures are strictly synthetic and anchored to the fictional 2030-01-01 epoch.
+- `spikes/` — throw-away; never referenced.
+- Build/test: `powershell -File scripts\dotnet.ps1 test QuotaDuck.sln -c Release`; denylist: `powershell -File scripts\check-denylist.ps1`.
 
 ## Working rules
 - Stop and ask before: downloading/installing anything not already approved, touching the owner's Claude/Codex/Windows configuration, any probe that talks to a provider beyond the approved quota-only handshake.
