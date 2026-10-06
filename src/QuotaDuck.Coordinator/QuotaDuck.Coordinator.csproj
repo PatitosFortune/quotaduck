@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>QuotaDuck.Coordinator</RootNamespace>
+    <AssemblyName>QuotaDuck.Coordinator</AssemblyName>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+  <!--
+    Application-layer coordination (no UI): watches the Claude bridge state file (passive), schedules Codex reads (pull), and turns both
+    into one provider-independent snapshot for the later WPF shell. It never launches a process (that is the Codex runner's job), has no
+    networking, and never writes provider state (the bridge is the only writer of the Claude file).
+  -->
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.Versioning.SupportedOSPlatformAttribute">
+      <_Parameter1>windows</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\QuotaDuck.Core\QuotaDuck.Core.csproj" />
+    <ProjectReference Include="..\QuotaDuck.Codex\QuotaDuck.Codex.csproj" />
+    <InternalsVisibleTo Include="QuotaDuck.Coordinator.Tests" />
+  </ItemGroup>
+</Project>

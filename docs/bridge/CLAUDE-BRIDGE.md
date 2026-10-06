@@ -60,3 +60,13 @@ Never: network APIs, process spawning, registry, browser/credential access, Clau
 
 ## Verification
 `powershell -File scripts\verify-bridge-aot.ps1` — publishes the production bridge **and** the test-seam build as Native AOT; gates the production exe (single file, size, binary string scan for override/test-hook strings); runs the process tests against both AOT binaries; and measures timing (state redirected to a temp directory via the seam; the real state directory is never touched).
+
+
+## Atomic replace retry (coordinator gate)
+
+The state is written to a temp file in the same directory and moved over `claude-v1.json` (`File.Move(overwrite)`). Windows can refuse that
+rename while another process (e.g. the app reading the file) has the destination open. Only this **final replace** is retried: at most three
+retries after 5, 10 and 20 ms (<= 35 ms added in the worst case), and only for a sharing/lock violation or an access-denied error on an
+existing, non-read-only destination. Missing directories, bad paths, read-only destinations, disk-full and everything else are permanent
+and fail on the first attempt. When the retries are exhausted the exception is handled as before: the temp file is deleted, the previous state
+file is left byte-for-byte intact, and the status line is never blocked for longer than the lock timeout.

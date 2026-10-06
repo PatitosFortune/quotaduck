@@ -36,6 +36,12 @@ internal sealed record StoreOptions
 
     /// <summary>TEST SEAM (null in production): invoked after the temp file is fully written, just before the atomic replace.</summary>
     public Action<string>? BeforeReplace { get; init; }
+
+    /// <summary>TEST SEAM (null in production = File.Move with overwrite): the atomic replace of (temp, destination).</summary>
+    public Action<string, string>? Replace { get; init; }
+
+    /// <summary>TEST SEAM (null in production = Thread.Sleep): the pause between replace retries, in milliseconds.</summary>
+    public Action<int>? Sleep { get; init; }
 }
 
 /// <summary>
@@ -226,13 +232,80 @@ internal sealed class FileClaudeStateStore : IClaudeStateStore
             }
 
             _options.BeforeReplace?.Invoke(tmp);
-            File.Move(tmp, _path, overwrite: true);   // MoveFileEx(REPLACE_EXISTING): the destination is never observed half-written
+            ReplaceWithRetry(tmp);                    // MoveFileEx(REPLACE_EXISTING): the destination is never observed half-written
         }
         catch
         {
             TryDelete(tmp);
             throw;
         }
+    }
+
+    /// <summary>Pauses before retry 1, 2 and 3 (milliseconds): at most 35 ms of added delay in the worst case, never a general retry loop.</summary>
+    internal static readonly int[] ReplaceRetryDelaysMs = [5, 10, 20];
+
+    /// <summary>
+    /// The final replace only. Windows can refuse a rename-over (access denied / sharing violation) while ANOTHER process briefly has the
+    /// destination open — e.g. the coordinator reading it. That is retried up to three times with the short pauses above; every other failure
+    /// (missing directory, bad path, read-only destination, anything unrelated to sharing) is permanent and is not retried. If the retries run
+    /// out the exception propagates: the caller removes the temp file and the previous state file is untouched.
+    /// </summary>
+    private void ReplaceWithRetry(string tmp)
+    {
+        for (int attempt = 0; ; attempt++)
+        {
+            try
+            {
+                if (_options.Replace is { } replace)
+                {
+                    replace(tmp, _path);
+                }
+                else
+                {
+                    File.Move(tmp, _path, overwrite: true);
+                }
+
+                return;
+            }
+            catch (Exception e) when (attempt < ReplaceRetryDelaysMs.Length && IsTransientSharingConflict(e, _path))
+            {
+                if (_options.Sleep is { } sleep)
+                {
+                    sleep(ReplaceRetryDelaysMs[attempt]);
+                }
+                else
+                {
+                    Thread.Sleep(ReplaceRetryDelaysMs[attempt]);
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// True only for ERROR_SHARING_VIOLATION / ERROR_LOCK_VIOLATION, or for "access denied" on a destination that exists and is not read-only
+    /// (the signature of another handle being open; a genuine ACL denial looks identical, which is why the retry is tiny and bounded).
+    /// </summary>
+    internal static bool IsTransientSharingConflict(Exception e, string destination)
+    {
+        if (e is IOException io && (uint)io.HResult is 0x80070020u or 0x80070021u)
+        {
+            return true;
+        }
+
+        if (e is UnauthorizedAccessException)
+        {
+            try
+            {
+                var info = new FileInfo(destination);
+                return info.Exists && (info.Attributes & FileAttributes.ReadOnly) == 0;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>Under the lock any leftover temp file is by definition from a crashed writer.</summary>

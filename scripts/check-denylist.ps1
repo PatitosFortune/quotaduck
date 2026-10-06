@@ -26,6 +26,8 @@ $Allow = @{
   'src/QuotaDuck.Bridge/FileClaudeStateStore.cs'   = @('directory scanning / enumeration (only the bridge may list ITS OWN state dir, by allowance)')
   # The Codex runner's P/Invoke surface: package-family lookup, final-path canonicalisation, WinVerifyTrust. Reads no file contents.
   'src/QuotaDuck.Codex/Native.cs'                  = @('raw native interop (only named files may, by allowance)')
+  # The coordinator's reader copy of the bridge's token-based state location (3 read-only shell/profile calls; nothing is created or written).
+  'src/QuotaDuck.Coordinator/ClaudeStateLocation.cs' = @('raw native interop (only named files may, by allowance)')
   # The ONE place a process is launched: a validated absolute codex.exe, UseShellExecute=false, constant ArgumentList, cleared environment.
   'src/QuotaDuck.Codex/CodexProcess.cs'            = @('process launch (only the Codex runner may, by allowance)')
 }

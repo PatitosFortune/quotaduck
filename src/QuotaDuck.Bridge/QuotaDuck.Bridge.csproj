@@ -25,5 +25,6 @@
   <ItemGroup>
     <ProjectReference Include="..\QuotaDuck.Core\QuotaDuck.Core.csproj" />
     <InternalsVisibleTo Include="QuotaDuck.Bridge.Tests" />
+    <InternalsVisibleTo Include="QuotaDuck.Coordinator.Tests" />
   </ItemGroup>
 </Project>
