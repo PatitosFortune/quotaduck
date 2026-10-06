@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>QuotaDuck.Codex</RootNamespace>
+    <AssemblyName>QuotaDuck.Codex</AssemblyName>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+  <!--
+    The Codex quota runner: discovery + signature validation of the MSIX codex.exe, a structurally restricted stdio JSON-RPC client
+    (initialize, initialized, account/rateLimits/read only) and the child-process lifecycle. It contains NO HTTP/socket code: the only
+    thing that ever touches the network is the Codex child process itself (see docs/codex/CODEX-RUNNER.md).
+  -->
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.Versioning.SupportedOSPlatformAttribute">
+      <_Parameter1>windows</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\QuotaDuck.Core\QuotaDuck.Core.csproj" />
+    <InternalsVisibleTo Include="QuotaDuck.Codex.Tests" />
+  </ItemGroup>
+</Project>

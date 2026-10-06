@@ -100,7 +100,7 @@ public static class ClaudeStatusLineParser
         {
             // Error path only: classify depth overflow with a cheap O(n) structural scan (the reader's own message is not
             // reliable under resource-key trimming).
-            return Fail(ExceedsDepth(utf8) ? ClaudeParseStatus.TooDeep : ClaudeParseStatus.MalformedJson);
+            return Fail(JsonDepthScan.Exceeds(utf8, MaxDepth) ? ClaudeParseStatus.TooDeep : ClaudeParseStatus.MalformedJson);
         }
         catch (InvalidOperationException)
         {
@@ -109,58 +109,6 @@ public static class ClaudeStatusLineParser
     }
 
     private static ClaudeStatusLineParse Fail(ClaudeParseStatus status) => new(status, default, default);
-
-    /// <summary>True if brackets nest deeper than <see cref="MaxDepth"/> outside of string literals.</summary>
-    private static bool ExceedsDepth(ReadOnlySpan<byte> utf8)
-    {
-        int depth = 0;
-        bool inString = false, escaped = false;
-        foreach (byte b in utf8)
-        {
-            if (inString)
-            {
-                if (escaped)
-                {
-                    escaped = false;
-                }
-                else if (b == (byte)'\\')
-                {
-                    escaped = true;
-                }
-                else if (b == (byte)'"')
-                {
-                    inString = false;
-                }
-
-                continue;
-            }
-
-            switch (b)
-            {
-                case (byte)'"':
-                    inString = true;
-                    break;
-                case (byte)'{':
-                case (byte)'[':
-                    if (++depth > MaxDepth)
-                    {
-                        return true;
-                    }
-
-                    break;
-                case (byte)'}':
-                case (byte)']':
-                    if (depth > 0)
-                    {
-                        depth--;
-                    }
-
-                    break;
-            }
-        }
-
-        return false;
-    }
 
     private static ClaudeStatusLineParse ParseRoot(ref Utf8JsonReader r)
     {

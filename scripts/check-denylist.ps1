@@ -24,6 +24,10 @@ $Allow = @{
   'src/QuotaDuck.Bridge/Native.cs'                 = @('raw native interop (only named files may, by allowance)')
   # Removes leftover temp files (claude-v1.json.*.tmp) from the bridge's OWN fixed state directory, under its lock. No other scanning.
   'src/QuotaDuck.Bridge/FileClaudeStateStore.cs'   = @('directory scanning / enumeration (only the bridge may list ITS OWN state dir, by allowance)')
+  # The Codex runner's P/Invoke surface: package-family lookup, final-path canonicalisation, WinVerifyTrust. Reads no file contents.
+  'src/QuotaDuck.Codex/Native.cs'                  = @('raw native interop (only named files may, by allowance)')
+  # The ONE place a process is launched: a validated absolute codex.exe, UseShellExecute=false, constant ArgumentList, cleared environment.
+  'src/QuotaDuck.Codex/CodexProcess.cs'            = @('process launch (only the Codex runner may, by allowance)')
 }
 
 $files = Get-ChildItem (Join-Path $Root 'src') -Recurse -File -Include *.cs, *.csproj, *.props, *.targets, *.xaml -ErrorAction SilentlyContinue |
