@@ -60,6 +60,8 @@ A failed Codex attempt is an overlay only: it never refreshes (or ages) the olde
 
 **Lower-reading rule (`FreshnessPolicy.LowerAcceptCount`, default `DefaultLowerAcceptCount = 3`):** a conservative **v1 heuristic**. Anthropic's downward usage corrections inside a window are not yet characterised (UNKNOWN), so a same-epoch lower value is ignored (first and second identical report), accepted on the third identical consecutive report, restarted by any different lower value or any equal/higher report, and **bypassed entirely by a later `resetsAt` epoch** (a new window may legitimately start lower).
 
+**Stored timestamps never go backwards.** If the system clock steps back (or another process's reading interleaves), new records are stamped with the previous `ReceivedAt` instead, so `ChangedAt ≤ ReceivedAt` always holds and the strict state decoder never rejects (and silently loses) a valid record. Validation (reset in past / implausible) still uses the true `now`.
+
 Unknown incoming reset ⇒ assume stored epoch; unknown stored reset ⇒ adopt incoming. The persisted record is exactly `{UsedPercent, ResetsAt, ChangedAt, ReceivedAt, LowerCandidate, LowerStreak}` — no identity or payload field can be stored (reflection-tested).
 
 ## 4. Codex read (`CodexObservations.FromRead`)

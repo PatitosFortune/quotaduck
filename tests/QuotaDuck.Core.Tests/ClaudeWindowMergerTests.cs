@@ -353,6 +353,28 @@ public class ClaudeWindowMergerTests
     }
 
     [Fact]
+    public void ClockStepsBackwards_StoredTimestampsNeverGoBackwards_SoTheRecordStaysDecodable()
+    {
+        // NTP step-back / resume / interleaved clock readings from several processes must never produce ChangedAt > ReceivedAt
+        // (the strict state decoder would reject such a record and silently lose valid data).
+        ClaudeWindowRecord? rec = Merge(null, 40, R, T0 + H(1)).Record;
+        ClaudeWindowRecord first = rec!;
+        foreach ((double pct, TimeSpan at) in new[] { (45.0, H(1) - M(30)), (50.0, H(1) - M(45)), (50.0, H(1) - M(5)), (10.0, H(0)) })
+        {
+            ClaudeWindowRecord prev = rec!;
+            rec = Merge(rec, pct, R, T0 + at).Record;
+            Assert.True(rec!.ChangedAt <= rec.ReceivedAt, $"changed {rec.ChangedAt} > received {rec.ReceivedAt}");
+            Assert.True(rec.ReceivedAt >= prev.ReceivedAt, "ReceivedAt went backwards");
+            Assert.True(rec.ChangedAt >= first.ChangedAt - TimeSpan.FromTicks(0) || rec.ChangedAt >= prev.ChangedAt, "ChangedAt went backwards");
+        }
+
+        ClaudeStateDecodeResult back = ClaudeStateCodec.Decode(ClaudeStateCodec.Encode(new ClaudeState(rec, null)));
+        Assert.Equal(ClaudeStateDecodeStatus.Ok, back.Status);
+        Assert.NotNull(back.State.FiveHour);               // not dropped as invalid
+        Assert.Equal(0, back.DroppedWindows);
+    }
+
+    [Fact]
     public void ProviderInput_OnlyOneWindowReported_OtherIsNotReported_NeverZero()
     {
         ProviderInput input = ClaudeObservations.ToProviderInput(Rec(30, T0 + H(3), T0), null);

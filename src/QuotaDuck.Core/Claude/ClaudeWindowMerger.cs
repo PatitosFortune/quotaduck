@@ -68,6 +68,11 @@ public static class ClaudeWindowMerger
         ArgumentNullException.ThrowIfNull(policy);
         now = now.ToUniversalTime();
 
+        // Stored timestamps never go backwards: if the system clock stepped back (NTP, resume) or another process's clock
+        // reading interleaves, the record is stamped with the previous ReceivedAt instead, so ChangedAt <= ReceivedAt always
+        // holds and the state file is never rejected by the strict decoder. Validation below still uses the true 'now'.
+        DateTimeOffset stamp = existing is not null && existing.ReceivedAt > now ? existing.ReceivedAt : now;
+
         if (incoming is not { } inc)
         {
             return new ClaudeMergeResult(existing, ClaudeMergeDecision.NoIncoming, false);
@@ -100,7 +105,7 @@ public static class ClaudeWindowMerger
         if (existing is null)
         {
             return new ClaudeMergeResult(
-                new ClaudeWindowRecord(pct, reset, now, now), ClaudeMergeDecision.FirstObservation, true);
+                new ClaudeWindowRecord(pct, reset, stamp, stamp), ClaudeMergeDecision.FirstObservation, true);
         }
 
         // Epoch relation. Unknown incoming reset => assume the stored epoch; unknown stored reset => adopt the incoming one.
@@ -115,25 +120,25 @@ public static class ClaudeWindowMerger
         if (epoch > 0)
         {
             return new ClaudeMergeResult(
-                new ClaudeWindowRecord(pct, reset, now, now), ClaudeMergeDecision.NewEpoch, true);
+                new ClaudeWindowRecord(pct, reset, stamp, stamp), ClaudeMergeDecision.NewEpoch, true);
         }
 
         if (epoch < 0)
         {
-            return Touched(existing, ClaudeMergeDecision.OlderEpochIgnored, now, policy);
+            return Touched(existing, ClaudeMergeDecision.OlderEpochIgnored, now, stamp, policy);
         }
 
         if (Math.Abs(pct - existing.UsedPercent) < Epsilon)
         {
             return Touched(
                 existing with { ResetsAt = mergedReset, LowerCandidate = null, LowerStreak = 0 },
-                ClaudeMergeDecision.Unchanged, now, policy, forceWrite: existing.ResetsAt != mergedReset || existing.LowerStreak != 0);
+                ClaudeMergeDecision.Unchanged, now, stamp, policy, forceWrite: existing.ResetsAt != mergedReset || existing.LowerStreak != 0);
         }
 
         if (pct > existing.UsedPercent)
         {
             return new ClaudeMergeResult(
-                new ClaudeWindowRecord(pct, mergedReset, now, now), ClaudeMergeDecision.Advanced, true);
+                new ClaudeWindowRecord(pct, mergedReset, stamp, stamp), ClaudeMergeDecision.Advanced, true);
         }
 
         // Same epoch, lower percentage: suspect a stale cache from another session.
@@ -141,21 +146,21 @@ public static class ClaudeWindowMerger
         if (streak >= policy.LowerAcceptCount)
         {
             return new ClaudeMergeResult(
-                new ClaudeWindowRecord(pct, mergedReset, now, now), ClaudeMergeDecision.AdjustedDown, true);
+                new ClaudeWindowRecord(pct, mergedReset, stamp, stamp), ClaudeMergeDecision.AdjustedDown, true);
         }
 
         return new ClaudeMergeResult(
-            existing with { ResetsAt = mergedReset, ReceivedAt = now, LowerCandidate = pct, LowerStreak = streak },
+            existing with { ResetsAt = mergedReset, ReceivedAt = stamp, LowerCandidate = pct, LowerStreak = streak },
             ClaudeMergeDecision.LowerIgnored, true);
     }
 
     private static ClaudeMergeResult Rejected(ClaudeWindowRecord? existing, ClaudeMergeDecision d) => new(existing, d, false);
 
-    /// <summary>Only ReceivedAt moves; write at most once per coalescing interval.</summary>
+    /// <summary>Only ReceivedAt moves; write at most once per coalescing interval (judged against the true clock).</summary>
     private static ClaudeMergeResult Touched(
-        ClaudeWindowRecord existing, ClaudeMergeDecision decision, DateTimeOffset now, FreshnessPolicy policy, bool forceWrite = false)
+        ClaudeWindowRecord existing, ClaudeMergeDecision decision, DateTimeOffset now, DateTimeOffset stamp, FreshnessPolicy policy, bool forceWrite = false)
     {
         bool due = now - existing.ReceivedAt >= policy.PersistReceivedAtEvery;
-        return new ClaudeMergeResult(existing with { ReceivedAt = now }, decision, forceWrite || due);
+        return new ClaudeMergeResult(existing with { ReceivedAt = stamp }, decision, forceWrite || due);
     }
 }

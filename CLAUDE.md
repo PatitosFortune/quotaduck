@@ -36,6 +36,7 @@ QuotaDuck is a tiny Windows 11 tray/widget that shows **Claude** and **ChatGPT/C
 - Terminal Claude Code (CLI, incl. VS Code's integrated terminal): status-line hook **works**.
 - VS Code Claude Code panel (`claude-vscode`): tested; **does not fire** the status-line hook.
 - Claude Desktop Code tab: **unsupported (observed)** — one clean retest, session verified at `cwd = quotaduck-app` with the probe config present, produced zero status-line events (see `docs/spikes/STEP0-RESULTS.md`). Residual uncertainty: the folder was moved mid-session.
+- **Bridge state path is fixed and not redirectable:** `<real LocalAppData from the process-user token>\QuotaDuck\bridge\claude-v1.json`. No environment variable (not `LOCALAPPDATA`, not `USERPROFILE`), no command-line argument, no `#if` in production source. Tests use an injected directory or the separate test-seam executable.
 - Therefore Claude quota is observable **only while a supported Claude Code terminal session reports**. Usage generated elsewhere (panel, Desktop, claude.ai web) may stay invisible until a terminal session reports again.
 - **Never present missing Claude observations as 0%.** No data ⇒ "Waiting for Claude Code in a terminal"; elapsed window ⇒ "waiting for next report"; always show ages.
 
@@ -47,7 +48,8 @@ QuotaDuck is a tiny Windows 11 tray/widget that shows **Claude** and **ChatGPT/C
 
 ## Layout and commands
 - `src/QuotaDuck.Core` — pure logic (models, §34 freshness/reset derivation, Claude merge, Codex read → observations). No I/O, no clock reads (`now` is always a parameter), BCL only, AOT-compatible. State table: `docs/core/FRESHNESS-STATE-TABLE.md`.
-- `tests/QuotaDuck.Core.Tests` — xunit (dev-only); fixtures are strictly synthetic and anchored to the fictional 2030-01-01 epoch.
+- `src/QuotaDuck.Bridge` — the Claude status-line bridge (`quotaduck-statusline.exe`, Native AOT): stdin JSON → Core parser/merge → atomic user-only state file; `--tap` prints nothing. Design/schema/permissions: `docs/bridge/CLAUDE-BRIDGE.md`. Verify: `powershell -File scripts\verify-bridge-aot.ps1`.
+- `tests/QuotaDuck.Core.Tests`, `tests/QuotaDuck.Bridge.Tests` — xunit (dev-only); fixtures are strictly synthetic (fictional 2030-01-01 epoch, canary strings in every non-allow-listed field). Never persist a real status-line payload.
 - `spikes/` — throw-away; never referenced.
 - Build/test: `powershell -File scripts\dotnet.ps1 test QuotaDuck.sln -c Release`; denylist: `powershell -File scripts\check-denylist.ps1`.
 

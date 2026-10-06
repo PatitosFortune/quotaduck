@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    TEST-ONLY executable. Never shipped, never referenced by production code.
+    It compiles the PRODUCTION bridge sources (everything in src/QuotaDuck.Bridge except Program.cs) with a different entry point
+    that takes the state directory from a test-only variable and refuses to run without one, so process-level tests can exercise the
+    real code without ever touching the user's real state — while the production executable keeps its fixed, non-overridable path.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>quotaduck-statusline-testseam</AssemblyName>
+    <RootNamespace>QuotaDuck.Bridge</RootNamespace>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <PublishAot>true</PublishAot>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <UseSystemResourceKeys>true</UseSystemResourceKeys>
+    <StackTraceSupport>false</StackTraceSupport>
+    <EventSourceSupport>false</EventSourceSupport>
+    <IlcOptimizationPreference>Size</IlcOptimizationPreference>
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\..\src\QuotaDuck.Bridge\*.cs" Exclude="..\..\src\QuotaDuck.Bridge\Program.cs" />
+    <Compile Include="Program.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.Versioning.SupportedOSPlatformAttribute">
+      <_Parameter1>windows</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\QuotaDuck.Core\QuotaDuck.Core.csproj" />
+  </ItemGroup>
+</Project>

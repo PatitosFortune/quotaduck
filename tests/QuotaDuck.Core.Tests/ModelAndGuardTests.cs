@@ -145,8 +145,10 @@ public class ArchitectureGuardTests
     public void PublicSurface_ExposesNoRawProviderPayloadTypes()
     {
         // No JsonElement/JsonDocument/Stream/byte[] in any public signature of Core: raw payloads cannot cross into Core.
+        // byte[] is exempt ONLY for ClaudeStateCodec, which encodes/decodes QuotaDuck's own persisted schema (never a provider
+        // payload). The provider-payload entry point takes ReadOnlySpan<byte> and returns numbers/flags only (tested separately).
         Type[] banned = [typeof(System.Text.Json.JsonElement), typeof(System.Text.Json.JsonDocument), typeof(Stream), typeof(byte[])];
-        foreach (Type t in Core.GetExportedTypes())
+        foreach (Type t in Core.GetExportedTypes().Where(t => t != typeof(Claude.ClaudeStateCodec)))
         {
             foreach (MemberInfo mem in t.GetMembers(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly))
             {

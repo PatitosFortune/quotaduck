@@ -195,4 +195,46 @@ public class InvariantTests
 
         Assert.NotNull(rec);
     }
+
+    [Fact]
+    public void JitteringNonMonotonicClock_NeverProducesAnUndecodableRecord_AndTimestampsOnlyMoveForward()
+    {
+        // Many "processes" interleave with slightly out-of-order clock readings (and the odd big step back).
+        var rng = new Random(20300107);
+        ClaudeWindowRecord? rec = null;
+        DateTimeOffset baseTime = T0;
+        DateTimeOffset epoch = T0 + H(5);
+        double truth = 1;
+        for (int i = 0; i < 6000; i++)
+        {
+            baseTime += TimeSpan.FromSeconds(rng.Next(0, 90));
+            DateTimeOffset now = baseTime + TimeSpan.FromSeconds(rng.Next(-120, 30));           // jitter, can be before earlier readings
+            if (rng.Next(500) == 0)
+            {
+                now -= H(2);                                                                    // occasional large step back
+            }
+
+            truth = Math.Min(100, truth + rng.NextDouble() * 0.2);
+            ClaudeWindowRecord? before = rec;
+            ClaudeMergeResult r = ClaudeWindowMerger.Merge(
+                ClaudeWindowKind.FiveHour, before, new ClaudeIncomingWindow(Math.Round(truth, 2), epoch), now.ToUniversalTime() + TimeSpan.FromHours(0), Policy);
+            rec = r.Record;
+            if (rec is null)
+            {
+                continue;
+            }
+
+            Assert.True(rec.ChangedAt <= rec.ReceivedAt, $"i={i}");
+            if (before is not null)
+            {
+                Assert.True(rec.ReceivedAt >= before.ReceivedAt, $"i={i} ReceivedAt backwards");
+            }
+
+            ClaudeStateDecodeResult back = ClaudeStateCodec.Decode(ClaudeStateCodec.Encode(new ClaudeState(rec, null)));
+            Assert.Equal(ClaudeStateDecodeStatus.Ok, back.Status);
+            Assert.NotNull(back.State.FiveHour);
+        }
+
+        Assert.NotNull(rec);
+    }
 }
