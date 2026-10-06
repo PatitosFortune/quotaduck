@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <AssemblyName>QuotaDuck</AssemblyName>
+    <RootNamespace>QuotaDuck.App</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- DPI awareness (PerMonitorV2) is declared in app.manifest, which is what WPF reads; WFO0003 only concerns WinForms forms -->
+    <NoWarn>$(NoWarn);WFO0003</NoWarn>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <!-- tiny, framework-dependent app: workstation non-concurrent GC keeps the idle footprint small -->
+    <ServerGarbageCollector>false</ServerGarbageCollector>
+    <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
+    <TieredPGO>false</TieredPGO>
+    <UseSystemResourceKeys>true</UseSystemResourceKeys>
+  </PropertyGroup>
+  <!--
+    The ONLY project that references WPF / WinForms (NotifyIcon). A thin shell over QuotaDuck.Coordinator's AppSnapshot: no provider
+    logic, no parsing, no process launching, no networking, no file writes. It references Core (types) and Coordinator (service) only.
+  -->
+  <ItemGroup>
+    <!-- WinForms' implicit usings collide with WPF type names (Application, Brush, ...) -->
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\QuotaDuck.Core\QuotaDuck.Core.csproj" />
+    <ProjectReference Include="..\QuotaDuck.Coordinator\QuotaDuck.Coordinator.csproj" />
+    <InternalsVisibleTo Include="QuotaDuck.App.Tests" />
+  </ItemGroup>
+</Project>

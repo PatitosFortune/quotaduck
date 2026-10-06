@@ -1,0 +1,310 @@
+using System.Windows;
+using System.Windows.Automation;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using System.Windows.Threading;
+using QuotaDuck.App.Shell;
+using QuotaDuck.App.Views;
+using QuotaDuck.Coordinator;
+using QuotaDuck.Core;
+using QuotaDuck.Core.Claude;
+
+namespace QuotaDuck.App.Tests;
+
+internal static class Sta
+{
+    public static void Run(Action body)
+    {
+        Exception? error = null;
+        var t = new Thread(() =>
+        {
+            try
+            {
+                body();
+            }
+            catch (Exception e)
+            {
+                error = e;
+            }
+            finally
+            {
+                Dispatcher.CurrentDispatcher.InvokeShutdown();
+            }
+        });
+        t.SetApartmentState(ApartmentState.STA);
+        t.Start();
+        Assert.True(t.Join(TimeSpan.FromSeconds(60)), "STA test timed out");
+        if (error is not null)
+        {
+            System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(error).Throw();
+        }
+    }
+
+    public static void Flush() => Dispatcher.CurrentDispatcher.Invoke(DispatcherPriority.ApplicationIdle, () => { });
+
+    public static IEnumerable<T> Descendants<T>(DependencyObject root) where T : DependencyObject
+    {
+        int n = VisualTreeHelper.GetChildrenCount(root);
+        for (int i = 0; i < n; i++)
+        {
+            DependencyObject c = VisualTreeHelper.GetChild(root, i);
+            if (c is T t)
+            {
+                yield return t;
+            }
+
+            foreach (T d in Descendants<T>(c))
+            {
+                yield return d;
+            }
+        }
+    }
+}
+
+/// <summary>The real WPF flyout window (STA) driven by fake snapshots: lifecycle, binding, keyboard and accessibility.</summary>
+public class FlyoutWindowTests
+{
+    private static (FlyoutWindow Window, ShellViewModel Vm, FakeService Service, List<bool> Visibility) Make()
+    {
+        var service = new FakeService();
+        var vm = new ShellViewModel(service, new FakeTicker(), new FakeClock(Snap.T0), Snap.Utc);
+        var w = new FlyoutWindow(vm);
+        var vis = new List<bool>();
+        w.VisibleChanged += vis.Add;
+        return (w, vm, service, vis);
+    }
+
+    private static string[] Texts(DependencyObject root) => Sta.Descendants<TextBlock>(root).Select(t => t.Text).ToArray();
+
+    /// <summary>The template instantiates a collapsed button for Claude too; only VISIBLE buttons exist for the user.</summary>
+    private static Button[] VisibleButtons(FlyoutWindow w) => Sta.Descendants<Button>(w).Where(b => b.IsVisible).ToArray();
+
+    private static Button RefreshButton(FlyoutWindow w) => Assert.Single(VisibleButtons(w));
+
+    [Fact]
+    public void ShowHide_RaisesVisibilityEvents_CloseHidesInsteadOfClosing_AndItCanBeShownAgain()
+    {
+        Sta.Run(() =>
+        {
+            (FlyoutWindow w, _, _, List<bool> vis) = Make();
+            ((IFlyout)w).Show();
+            Sta.Flush();
+            Assert.True(w.IsVisible);
+            Assert.Equal([true], vis);
+
+            ((IFlyout)w).Hide();
+            Sta.Flush();
+            Assert.False(w.IsVisible);
+            Assert.Equal([true, false], vis);
+
+            ((IFlyout)w).Show();
+            w.Close();                                                                  // the X button / Alt+F4: must hide, never destroy
+            Sta.Flush();
+            Assert.False(w.IsVisible);
+            Assert.True(w.IsLoaded);
+            Assert.Equal([true, false, true, false], vis);
+
+            ((IFlyout)w).Show();                                                        // still usable
+            Assert.True(w.IsVisible);
+
+            w.AllowClose();                                                             // only Exit really closes
+            w.Close();
+            Sta.Flush();
+            Assert.False(w.IsLoaded);
+        });
+    }
+
+    [Fact]
+    public void EscapeHidesTheFlyout()
+    {
+        Sta.Run(() =>
+        {
+            (FlyoutWindow w, _, _, List<bool> vis) = Make();
+            ((IFlyout)w).Show();
+            Sta.Flush();
+            var e = new KeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(w)!, 0, Key.Escape) { RoutedEvent = UIElement.PreviewKeyDownEvent };
+            w.RaiseEvent(e);
+            Sta.Flush();
+            Assert.True(e.Handled);
+            Assert.False(w.IsVisible);
+            Assert.Equal([true, false], vis);
+            ((IFlyout)w).Show();                                                        // other keys do not hide it
+            w.RaiseEvent(new KeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(w)!, 0, Key.A) { RoutedEvent = UIElement.PreviewKeyDownEvent });
+            Assert.True(w.IsVisible);
+        });
+    }
+
+    [Fact]
+    public void RefreshButton_ReflectsAllowed_Cooldown_Reading_AndClaudeHasNoButton()
+    {
+        Sta.Run(() =>
+        {
+            (FlyoutWindow w, ShellViewModel vm, FakeService svc, _) = Make();
+            ((IFlyout)w).Show();
+            Sta.Flush();
+            Assert.Single(VisibleButtons(w));                                          // exactly one visible button in the whole window: Codex's
+            Button b = RefreshButton(w);
+            Assert.Equal("Refresh", b.Content);
+            Assert.True(b.IsEnabled);
+
+            svc.Current = Snap.Make(Snap.T0, allowed: false, allowedAt: Snap.T0.AddSeconds(30));
+            vm.Refresh();
+            Sta.Flush();
+            Assert.Equal("Refresh in 30 s", RefreshButton(w).Content);
+            Assert.False(RefreshButton(w).IsEnabled);
+
+            svc.Current = Snap.Make(Snap.T0, codex: Snap.Codex(Snap.T0), reading: true, allowed: false);
+            vm.Refresh();
+            Sta.Flush();
+            Assert.Equal("Reading…", RefreshButton(w).Content);
+            Assert.False(RefreshButton(w).IsEnabled);
+
+            svc.Current = Snap.Make(Snap.T0.AddMinutes(2), codex: Snap.Codex(Snap.T0));
+            vm.Refresh();
+            Sta.Flush();
+            Assert.True(RefreshButton(w).IsEnabled);
+            Assert.True(RefreshButton(w).Focusable);                                    // keyboard reachable (Tab / Space / Enter)
+            Assert.True(RefreshButton(w).IsTabStop);
+        });
+    }
+
+    [Fact]
+    public void ClickingRefresh_RaisesRefreshRequested()
+    {
+        Sta.Run(() =>
+        {
+            (FlyoutWindow w, _, _, _) = Make();
+            int clicks = 0;
+            w.RefreshRequested += () => clicks++;
+            ((IFlyout)w).Show();
+            Sta.Flush();
+            RefreshButton(w).RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
+            Assert.Equal(1, clicks);
+        });
+    }
+
+    [Fact]
+    public void BothProviderSectionsAreRendered_WithTheirOwnStates()
+    {
+        Sta.Run(() =>
+        {
+            (FlyoutWindow w, ShellViewModel vm, FakeService svc, _) = Make();
+            ((IFlyout)w).Show();
+            Sta.Flush();
+            string[] waiting = Texts(w);
+            Assert.Contains("Claude", waiting);
+            Assert.Contains("Codex", waiting);
+            Assert.Contains("Waiting for Claude Code in a terminal", waiting);
+            Assert.Contains("Not read yet", waiting);
+
+            ClaudeState claude = new(Snap.Rec(42, Snap.T0.AddHours(3), Snap.T0.AddMinutes(-3)), Snap.Rec(12, Snap.T0.AddDays(4), Snap.T0.AddMinutes(-3)));
+            svc.Current = Snap.Make(Snap.T0, claude, Snap.Codex(Snap.T0.AddMinutes(-1)));
+            vm.Refresh();
+            Sta.Flush();
+            string[] live = Texts(w);
+            Assert.Contains("42% used", live);
+            Assert.Contains("58% left", live);
+            Assert.Contains("31% used", live);
+            Assert.Contains("Resets in 3 h (13:00)", live);
+            Assert.Contains("Reported by Claude Code", live);
+            Assert.Contains("Up to date", live);
+            Assert.Contains("Claude numbers come from Claude Code terminal sessions only.", live);
+        });
+    }
+
+    [Fact]
+    public void Accessibility_NamesOnTheWindowProgressBarsAndButton()
+    {
+        Sta.Run(() =>
+        {
+            (FlyoutWindow w, ShellViewModel vm, FakeService svc, _) = Make();
+            svc.Current = Snap.Make(Snap.T0, new ClaudeState(Snap.Rec(42, Snap.T0.AddHours(3), Snap.T0.AddMinutes(-3)), null), Snap.Codex(Snap.T0));
+            vm.Refresh();
+            ((IFlyout)w).Show();
+            Sta.Flush();
+            Assert.Equal("QuotaDuck quota", AutomationProperties.GetName(w));
+            ProgressBar[] bars = Sta.Descendants<ProgressBar>(w).ToArray();
+            Assert.Equal(4, bars.Length);                                               // Claude 5h + weekly (one with no data), Codex 5h + weekly
+            Assert.All(bars, p => Assert.False(string.IsNullOrWhiteSpace(AutomationProperties.GetName(p))));
+            Assert.Contains(bars, p => AutomationProperties.GetName(p).StartsWith("Claude 5-hour: 42% used", StringComparison.Ordinal));
+            Assert.Equal("Refresh Codex quota", AutomationProperties.GetName(RefreshButton(w)));
+            Assert.True(KeyboardNavigation.GetTabNavigation(w) == KeyboardNavigationMode.Cycle);
+        });
+    }
+
+    [Fact]
+    public void Layout_IsDpiFriendly_AndPlacedInsideTheWorkArea()
+    {
+        Sta.Run(() =>
+        {
+            (FlyoutWindow w, _, _, _) = Make();
+            Assert.True(w.UseLayoutRounding);
+            Assert.Equal(SizeToContent.Height, w.SizeToContent);
+            Assert.False(w.Topmost);                                                    // no always-on-top widget in this gate
+            Assert.False(w.ShowInTaskbar);
+            ((IFlyout)w).Show();
+            Sta.Flush();
+            Rect wa = SystemParameters.WorkArea;
+            Assert.InRange(w.Left, wa.Left - 1, wa.Right);
+            Assert.True(w.Left + w.ActualWidth <= wa.Right + 1);
+            Assert.True(w.Top >= wa.Top - 1);
+        });
+    }
+
+    [Fact]
+    public void ThePlaceholderUi_HasNoAnimations_SoReducedMotionIsTriviallyHonoured()
+    {
+        string xaml = File.ReadAllText(Path.Combine(ArchitectureTests.Root(), "src", "QuotaDuck.App", "Views", "FlyoutWindow.xaml"));
+        foreach (string anim in new[] { "Storyboard", "Animation", "BeginStoryboard", "EventTrigger", "Transition" })
+        {
+            Assert.DoesNotContain(anim, xaml);
+        }
+
+        string app = File.ReadAllText(Path.Combine(ArchitectureTests.Root(), "src", "QuotaDuck.App", "App.xaml.cs"));
+        Assert.Contains("SystemParameters.ClientAreaAnimation", app);                   // the ViewModel carries the OS setting for the art to come
+    }
+
+    [Fact]
+    public void Screenshots_RenderedForReview()
+    {
+        string dir = Path.Combine(ArchitectureTests.Root(), "artifacts", "screenshots");
+        Directory.CreateDirectory(dir);
+        ClaudeState fresh = new(Snap.Rec(42, Snap.T0.AddHours(3), Snap.T0.AddMinutes(-3)), Snap.Rec(12, Snap.T0.AddDays(4), Snap.T0.AddMinutes(-3)));
+        ClaudeState elapsed = new(Snap.Rec(80, Snap.T0.AddMinutes(-20), Snap.T0.AddHours(-4)), Snap.Rec(20, Snap.T0.AddDays(4), Snap.T0.AddHours(-3)));
+        (string Name, AppSnapshot Snapshot)[] cases =
+        [
+            ("1-waiting-and-not-read", Snap.Make(Snap.T0)),
+            ("2-both-fresh", Snap.Make(Snap.T0, fresh, Snap.Codex(Snap.T0.AddMinutes(-1)))),
+            ("3-claude-elapsed-codex-cooldown", Snap.Make(Snap.T0, elapsed, Snap.Codex(Snap.T0.AddMinutes(-1)), allowed: false, allowedAt: Snap.T0.AddSeconds(41))),
+            ("4-codex-failed-claude-quiet", Snap.Make(Snap.T0, new ClaudeState(Snap.Rec(42, Snap.T0.AddHours(1), Snap.T0.AddHours(-2).AddMinutes(-10)), null), Snap.Codex(Snap.T0.AddMinutes(-15)), codexIssue: ProviderIssue.TemporaryProviderFailure, attempt: new ProviderAttempt(Snap.T0.AddMinutes(-1), ProviderErrorKind.Timeout))),
+        ];
+        foreach ((string name, AppSnapshot snapshot) in cases)
+        {
+            Sta.Run(() =>
+            {
+                (FlyoutWindow w, ShellViewModel vm, FakeService svc, _) = Make();
+                svc.Current = snapshot;
+                vm.Refresh();
+                ((IFlyout)w).Show();
+                Sta.Flush();
+                var content = (FrameworkElement)w.Content;
+                int pw = (int)Math.Ceiling(content.ActualWidth + content.Margin.Left + content.Margin.Right);
+                int ph = (int)Math.Ceiling(content.ActualHeight + content.Margin.Top + content.Margin.Bottom);
+                var bmp = new RenderTargetBitmap(pw, ph, 96, 96, PixelFormats.Pbgra32);
+                var host = new Border { Background = SystemColors.WindowBrush, Width = pw, Height = ph };
+                var vb = new VisualBrush(content) { Stretch = Stretch.None, AlignmentX = AlignmentX.Left, AlignmentY = AlignmentY.Top, ViewboxUnits = BrushMappingMode.Absolute, Viewbox = new Rect(-content.Margin.Left, -content.Margin.Top, pw, ph) };
+                host.Background = vb;
+                host.Measure(new Size(pw, ph));
+                host.Arrange(new Rect(0, 0, pw, ph));
+                bmp.Render(host);
+                var enc = new PngBitmapEncoder();
+                enc.Frames.Add(BitmapFrame.Create(bmp));
+                using FileStream fs = File.Create(Path.Combine(dir, name + ".png"));
+                enc.Save(fs);
+                Assert.True(pw > 100 && ph > 100);
+            });
+        }
+    }
+}
