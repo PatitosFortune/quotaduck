@@ -96,12 +96,34 @@ public class CoordinatorArchitectureTests
         ];
         foreach (string lit in UserStrings(Coord.Location))
         {
+            if (lit is ".claude" or "settings.json")
+            {
+                continue;                                           // ONLY the setup probe's path parts; the source test below pins that
+            }
+
             string lower = lit.ToLowerInvariant();
             foreach (string bad in forbidden)
             {
                 Assert.False(lower.Contains(bad, StringComparison.Ordinal), $"literal \"{lit}\" contains \"{bad}\"");
             }
         }
+    }
+
+    [Fact]
+    public void TheClaudeSettingsPath_IsMentionedInExactlyOneFile_TheReadOnlyProbe()
+    {
+        string[] files = Sources("QuotaDuck.Coordinator")
+            .Where(f =>
+            {
+                string x = File.ReadAllText(f);
+                return x.Contains("\".claude\"", StringComparison.Ordinal) || x.Contains("settings.json", StringComparison.Ordinal);
+            })
+            .Select(f => Path.GetFileName(f)!).ToArray();
+        Assert.Equal(["ClaudeSetupProbe.cs"], files);
+        string probe = File.ReadAllText(Path.Combine(Root(), "src", "QuotaDuck.Coordinator", "ClaudeSetupProbe.cs"));
+        Assert.Contains("FileMode.Open, FileAccess.Read", probe);       // read-only
+        Assert.DoesNotContain("GetEnvironmentVariable", probe);          // the profile comes from the process token, not USERPROFILE
+        Assert.DoesNotContain("GetString()", probe);                     // the command text is compared in place, never copied out
     }
 
     [Fact]

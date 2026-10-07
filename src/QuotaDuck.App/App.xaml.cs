@@ -28,7 +28,9 @@ public partial class App : Application
             TimeProvider.System,
             TimeZoneInfo.Local,
             new DispatcherTicker(TimeSpan.FromMilliseconds(80)),
-            () => !SystemParameters.ClientAreaAnimation);                       // reduced motion = Windows "Show animations" off
+            () => !SystemParameters.ClientAreaAnimation,                        // reduced motion = Windows "Show animations" off
+            new ClaudeSetupInfo(ClaudeSetupProbeFactory.CreateDefault(), AppContext.BaseDirectory),
+            new WpfClipboard());
 
         // The flyout window is created lazily on first Show: a tray-only start pays nothing for WPF layout.
         _controller = new ShellController(
@@ -59,6 +61,10 @@ public partial class App : Application
 
         public event Action? RefreshRequested;
 
+        public event Action? CopySetupRequested;
+
+        public PxPoint? Anchor { get; set; }
+
         public void Show()
         {
             if (_w is null)
@@ -66,8 +72,10 @@ public partial class App : Application
                 _w = create();
                 _w.VisibleChanged += v => VisibleChanged?.Invoke(v);
                 _w.RefreshRequested += () => RefreshRequested?.Invoke();
+                _w.CopySetupRequested += () => CopySetupRequested?.Invoke();
             }
 
+            _w.Anchor = Anchor;
             ((IFlyout)_w).Show();
         }
 

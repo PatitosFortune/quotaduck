@@ -39,7 +39,12 @@ public sealed record ProviderCardModel(
     RefreshButtonModel? Refresh,
     string? Footer,
     PondScene Pond,
-    string PondDescription);
+    string PondDescription,
+    SetupGuideModel? Setup = null)
+{
+    /// <summary>The per-window rows are replaced by the setup guide while Claude has never reported (they would only say "No data").</summary>
+    public bool ShowWindows => Setup is null;
+}
 
 public sealed record ShellPresentation(
     ProviderCardModel Claude,

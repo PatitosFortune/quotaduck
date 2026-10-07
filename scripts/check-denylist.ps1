@@ -28,6 +28,12 @@ $Allow = @{
   'src/QuotaDuck.Codex/Native.cs'                  = @('raw native interop (only named files may, by allowance)')
   # The coordinator's reader copy of the bridge's token-based state location (3 read-only shell/profile calls; nothing is created or written).
   'src/QuotaDuck.Coordinator/ClaudeStateLocation.cs' = @('raw native interop (only named files may, by allowance)')
+  # The one read-only look at the user-level Claude settings: is there a statusLine entry, and is its command QuotaDuck's bridge? (enum result only)
+  'src/QuotaDuck.Coordinator/ClaudeSetupProbe.cs' = @('Claude/Codex config or transcript paths')
+  # The shell's only native calls: SetWindowPos / MonitorFromPoint / GetDpiForMonitor (documented user32/shcore) to place the flyout in physical pixels.
+  'src/QuotaDuck.App/Shell/NativeWindows.cs' = @('raw native interop (only named files may, by allowance)')
+  # DISPLAY TEXT ONLY: the first-run guide tells the user where their Claude settings file is. The app never opens it (the coordinator's probe does, read-only).
+  'src/QuotaDuck.App/Presentation/SetupGuide.cs' = @('Claude/Codex config or transcript paths')
   # The ONE place a process is launched: a validated absolute codex.exe, UseShellExecute=false, constant ArgumentList, cleared environment.
   'src/QuotaDuck.Codex/CodexProcess.cs'            = @('process launch (only the Codex runner may, by allowance)')
 }

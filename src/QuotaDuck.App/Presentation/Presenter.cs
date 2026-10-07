@@ -10,9 +10,9 @@ namespace QuotaDuck.App.Presentation;
 /// </summary>
 public static class Presenter
 {
-    public static ShellPresentation Present(AppSnapshot s, RefreshFeedback feedback, TimeZoneInfo zone)
+    public static ShellPresentation Present(AppSnapshot s, RefreshFeedback feedback, TimeZoneInfo zone, SetupContext? setup = null)
     {
-        ProviderCardModel claude = ClaudeCard(s, zone);
+        ProviderCardModel claude = ClaudeCard(s, zone, setup);
         ProviderCardModel codex = CodexCard(s, zone);
         string? fb = feedback == RefreshFeedback.None ? null : IssueText.ForRefreshFeedback(feedback, s.Codex.Issue);
         return new ShellPresentation(claude, codex, Tooltip(s), fb);
@@ -20,7 +20,7 @@ public static class Presenter
 
     // ---------------- Claude (passive: no refresh control of any kind) ----------------
 
-    private static ProviderCardModel ClaudeCard(AppSnapshot s, TimeZoneInfo zone)
+    private static ProviderCardModel ClaudeCard(AppSnapshot s, TimeZoneInfo zone, SetupContext? setup)
     {
         ProviderSnapshot p = s.Claude;
         List<WindowRowModel> rows = p.View.Windows.Select(w => Row("Claude", w, s.At, zone, "Last changed ")).ToList();
@@ -66,9 +66,11 @@ public static class Presenter
             tone,
             rows,
             Refresh: null,                                                  // there is nothing to refresh: Claude only reports when Claude Code runs
-            Footer: "Claude reports only from terminal Claude Code sessions.",
+            Footer: setup is not null && p.Issue == ProviderIssue.WaitingForTerminalClaudeCode ? null : "Claude reports only from terminal Claude Code sessions.",   // the guide says it already
             Pond: PondMapping.For(p, faceRight: true),
-            PondDescription: PondMapping.Describe("Claude", p));
+            PondDescription: PondMapping.Describe("Claude", p),
+            // first-run guidance only while Claude has NEVER reported (no state file yet); never once data exists
+            Setup: setup is not null && p.Issue == ProviderIssue.WaitingForTerminalClaudeCode ? SetupGuidePresenter.Build(setup) : null);
     }
 
     // ---------------- Codex (pull: manual refresh) ----------------

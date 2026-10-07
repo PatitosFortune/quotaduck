@@ -74,6 +74,12 @@ public class ArchitectureTests
             string text = File.ReadAllText(f);
             foreach (string b in banned)
             {
+                // the first-run guide's TEXT names the user's settings file (it never opens it: the coordinator's probe does, read-only)
+                if (Path.GetFileName(f) == "SetupGuide.cs" && b is ".claude" or "settings.json")
+                {
+                    continue;
+                }
+
                 Assert.False(text.Contains(b, StringComparison.Ordinal), $"{Path.GetFileName(f)} mentions {b}");
             }
         }
@@ -93,6 +99,11 @@ public class ArchitectureTests
             string text = File.ReadAllText(f);
             foreach (string b in banned)
             {
+                if (Path.GetFileName(f) == "NativeWindows.cs" && b is "DllImport" or "LibraryImport")
+                {
+                    continue;                                                         // the shell's one native file: window placement (documented user32/shcore)
+                }
+
                 Assert.False(text.Contains(b, StringComparison.Ordinal), $"{Path.GetFileName(f)} uses {b}");
             }
         }
@@ -113,9 +124,41 @@ public class ArchitectureTests
     public void Xaml_HasExactlyOneButton_TheCodexRefresh_AndNothingNamedLikeAClaudeRefresh()
     {
         string xaml = File.ReadAllText(Path.Combine(Root(), "src", "QuotaDuck.App", "Views", "FlyoutWindow.xaml"));
-        Assert.Single(System.Text.RegularExpressions.Regex.Matches(xaml, "<Button"));
+        // exactly two buttons: Codex's Refresh and the setup guide's Copy (the template is shared, but the guide exists only on Claude's card)
+        Assert.Equal(2, System.Text.RegularExpressions.Regex.Matches(xaml, "<Button").Count);
         Assert.Contains("Refresh Codex quota", xaml);
+        Assert.Contains("Copy the setup text to the clipboard", xaml);
         Assert.DoesNotContain("Refresh Claude", xaml);
+        Assert.DoesNotContain("Fetch", xaml);
+    }
+
+    [Fact]
+    public void NativeCode_ExistsInExactlyOneAppFile_AndNothingReadsOrWritesClaudeSettings()
+    {
+        string[] native = Sources("QuotaDuck.App").Where(f => f.EndsWith(".cs") && File.ReadAllText(f).Contains("LibraryImport", StringComparison.Ordinal)).Select(f => Path.GetFileName(f)!).ToArray();
+        Assert.Equal(["NativeWindows.cs"], native);
+        string[] settingsText = Sources("QuotaDuck.App").Where(f => File.ReadAllText(f).Contains("settings.json", StringComparison.Ordinal)).Select(f => Path.GetFileName(f)!).ToArray();
+        Assert.Equal(["SetupGuide.cs"], settingsText);                                // display text only
+        string setup = File.ReadAllText(Path.Combine(Root(), "src", "QuotaDuck.App", "Presentation", "SetupGuide.cs"));
+        foreach (string io in new[] { "File.", "FileStream", "StreamReader", "Directory." })
+        {
+            Assert.DoesNotContain(io, setup);
+        }
+    }
+
+    [Fact]
+    public void TheRuntimePrerequisite_IsDeclared_SoTheApphostShowsTheOfficialInstallDialog()
+    {
+        string outDir = new[] { "Release", "Debug" }.Select(c => Path.Combine(Root(), "src", "QuotaDuck.App", "bin", c, "net10.0-windows")).Where(Directory.Exists)
+            .OrderByDescending(d => File.GetLastWriteTimeUtc(Path.Combine(d, "QuotaDuck.dll"))).First();
+        string cfg = Path.Combine(outDir, "QuotaDuck.runtimeconfig.json");
+        Assert.True(File.Exists(cfg), "runtimeconfig missing");
+        using System.Text.Json.JsonDocument doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(cfg));
+        System.Text.Json.JsonElement opts = doc.RootElement.GetProperty("runtimeOptions");
+        System.Text.Json.JsonElement desktop = opts.GetProperty("frameworks").EnumerateArray().Single(f => f.GetProperty("name").GetString() == "Microsoft.WindowsDesktop.App");
+        Assert.StartsWith("10.0", desktop.GetProperty("version").GetString());                    // the Desktop runtime: that is what the missing-runtime dialog names
+        Assert.True(File.Exists(Path.Combine(outDir, "QuotaDuck.exe")), "framework-dependent apphost missing");
+        Assert.False(opts.TryGetProperty("includedFrameworks", out _));                         // not self-contained: v1 stays framework-dependent
     }
 
     [Fact]

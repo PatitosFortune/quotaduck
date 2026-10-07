@@ -318,6 +318,160 @@ public class FlyoutWindowTests
         Assert.Contains("SystemParameters.ClientAreaAnimation", app);                   // the ViewModel carries the OS setting for the art to come
     }
 
+    private static (FlyoutWindow Window, ShellViewModel Vm, FakeClipboard Clip) MakeWithSetup(ClaudeSetupState state, string? exe = null)
+    {
+        var service = new FakeService();
+        var clip = new FakeClipboard();
+        var vm = new ShellViewModel(service, new FakeTicker(), new FakeClock(Snap.T0), Snap.Utc, null, null, new FakeSetupInfo { State = state, BridgeExePath = exe }, clip);
+        return (new FlyoutWindow(vm), vm, clip);
+    }
+
+    [Fact]
+    public void TheSetupGuide_ShowsTheSnippetAndACopyButton_InPlaceOfTheEmptyRows_AndCopyRaisesTheEvent()
+    {
+        Sta.Run(() =>
+        {
+            (FlyoutWindow w, ShellViewModel vm, _) = MakeWithSetup(ClaudeSetupState.NotConfigured);
+            int copies = 0;
+            w.CopySetupRequested += () => copies++;
+            vm.SetFlyoutVisible(true);
+            ((IFlyout)w).Show();
+            Sta.Flush();
+            string[] texts = Texts(w);
+            Assert.Contains("Connect Claude Code (one-time setup)", texts);
+            Assert.Contains("Why only terminal sessions?", Sta.Descendants<System.Windows.Controls.Expander>(w).Select(x => (string)x.Header));
+            System.Windows.Controls.Expander more = Sta.Descendants<System.Windows.Controls.Expander>(w).Single(x => x.IsVisible);
+            Assert.False(more.IsExpanded);                                                 // the details are one keyboard action away, collapsed to keep the flyout short
+            more.IsExpanded = true;
+            Sta.Flush();
+            Assert.Contains(Texts(w), t => t.Contains("did not trigger the status line", StringComparison.Ordinal));
+            Assert.Contains(texts, t => t.Contains("never edits your Claude settings", StringComparison.Ordinal));
+            Assert.DoesNotContain("No data", Sta.Descendants<TextBlock>(w).Where(x => x.IsVisible).Select(x => x.Text));   // the two "No data" rows are replaced by the guide
+
+            TextBox snippet = Sta.Descendants<TextBox>(w).Single(t => t.IsVisible);
+            Assert.True(snippet.IsReadOnly);
+            Assert.Contains("\"statusLine\"", snippet.Text);
+            Assert.True(snippet.Focusable);                                                // selectable by keyboard too
+
+            Button[] buttons = VisibleButtons(w);
+            Assert.Equal(2, buttons.Length);                                               // Copy (Claude's guide) and Refresh (Codex)
+            Button copy = buttons.Single(b => AutomationProperties.GetName(b).StartsWith("Copy", StringComparison.Ordinal));
+            Assert.Equal("Copy", copy.Content);
+            copy.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
+            Assert.Equal(1, copies);
+            Assert.Equal("Refresh Codex quota", AutomationProperties.GetName(buttons.Single(b => b != copy)));
+        });
+    }
+
+    [Fact]
+    public void TheSetupGuide_IsGone_OnceClaudeHasData_AndOnlyRefreshRemains()
+    {
+        Sta.Run(() =>
+        {
+            (FlyoutWindow w, ShellViewModel vm, _) = MakeWithSetup(ClaudeSetupState.NotConfigured);
+            var svc = (FakeService)typeof(ShellViewModel).GetField("_service", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(vm)!;
+            svc.Current = Snap.Make(Snap.T0, new ClaudeState(Snap.Rec(42, Snap.T0.AddHours(3), Snap.T0.AddMinutes(-3)), null));
+            vm.SetFlyoutVisible(true);
+            ((IFlyout)w).Show();
+            Sta.Flush();
+            Assert.DoesNotContain(Sta.Descendants<TextBox>(w), t => t.IsVisible);
+            Assert.Equal("Refresh Codex quota", AutomationProperties.GetName(Assert.Single(VisibleButtons(w))));
+            Assert.Contains("42% used", Texts(w));
+        });
+    }
+
+    [Fact]
+    public void ATallFlyout_IsCappedToTheWorkArea_AndScrolls_NeverRunningOffTheScreen()
+    {
+        Sta.Run(() =>
+        {
+            var tiny = new MonitorArea(new PxRect(0, 0, 1280, 500), new PxRect(0, 0, 1280, 452), 1.0, true);     // a very small screen: content cannot fit
+            var service = new FakeService { Current = Snap.Make(Snap.T0, codex: Snap.Codex(Snap.T0)) };
+            var vm = new ShellViewModel(service, new FakeTicker(), new FakeClock(Snap.T0), Snap.Utc, null, null, new FakeSetupInfo { State = ClaudeSetupState.NotConfigured }, new FakeClipboard());
+            var mover = new PlacementMover();
+            var w = new FlyoutWindow(vm, new PlacementMonitors(tiny), mover);
+            vm.SetFlyoutVisible(true);
+            ((IFlyout)w).Show();
+            Sta.Flush();
+            Assert.True(w.MaxHeight <= 452 - 16 + 0.5, $"MaxHeight {w.MaxHeight}");
+            Assert.True(w.ActualHeight <= w.MaxHeight + 0.5, $"{w.ActualHeight} > {w.MaxHeight}");
+            var scroll = Sta.Descendants<System.Windows.Controls.ScrollViewer>(w).First();
+            Assert.True(scroll.ScrollableHeight > 0, "content taller than the screen must scroll");
+            Assert.True(mover.Last.Y >= 0 && mover.Last.Y + w.ActualHeight <= 452 + 1);
+        });
+    }
+
+    [Fact]
+    public void WhenTheContentGrowsWhileOpen_TheFlyoutIsPlacedAgain_BottomEdgeStaysAboveTheTaskbar()
+    {
+        Sta.Run(() =>
+        {
+            var m = new MonitorArea(new PxRect(0, 0, 1920, 1080), new PxRect(0, 0, 1920, 1032), 1.0, true);
+            var service = new FakeService { Current = Snap.Make(Snap.T0) };
+            var vm = new ShellViewModel(service, new FakeTicker(), new FakeClock(Snap.T0), Snap.Utc);
+            var mover = new PlacementMover();
+            var w = new FlyoutWindow(vm, new PlacementMonitors(m), mover) { Anchor = new PxPoint(1700, 1050) };
+            vm.SetFlyoutVisible(true);
+            ((IFlyout)w).Show();
+            Sta.Flush();
+            double before = mover.Last.Y + w.ActualHeight;
+            service.Current = Snap.Make(Snap.T0, new ClaudeState(Snap.Rec(42, Snap.T0.AddHours(3), Snap.T0.AddMinutes(-3)), Snap.Rec(12, Snap.T0.AddDays(4), Snap.T0.AddMinutes(-3))), Snap.Codex(Snap.T0.AddMinutes(-1)));
+            vm.Refresh();                                                                  // rows appear: the window grows
+            Sta.Flush();
+            Sta.Flush();
+            double after = mover.Last.Y + w.ActualHeight;
+            Assert.InRange(before, 1032 - 8 - 1, 1032 - 8 + 1);
+            Assert.InRange(after, 1032 - 8 - 1, 1032 - 8 + 1);                              // still one gap above the taskbar after growing
+        });
+    }
+
+    private sealed class PlacementMonitors(MonitorArea m) : IMonitorSource
+    {
+        public IReadOnlyList<MonitorArea> Monitors() => [m];
+    }
+
+    private sealed class PlacementMover : IWindowMover
+    {
+        public PxPoint Last { get; private set; }
+
+        public void MoveTo(nint hwnd, PxPoint topLeft) => Last = topLeft;
+    }
+
+    [Fact]
+    public void SetupGuideScreenshots_RenderedForReview()
+    {
+        string dir = Path.Combine(ArchitectureTests.Root(), "artifacts", "screenshots");
+        Directory.CreateDirectory(dir);
+        foreach ((string name, ClaudeSetupState state, string? exe) in new (string, ClaudeSetupState, string?)[]
+                 {
+                     ("8-setup-connect", ClaudeSetupState.NotConfigured, null),
+                     ("9-setup-existing-statusline", ClaudeSetupState.OtherStatusLine, @"C:\Apps\QuotaDuck\quotaduck-statusline.exe"),
+                     ("10-setup-connected-waiting", ClaudeSetupState.BridgeConfigured, null),
+                 })
+        {
+            Sta.Run(() =>
+            {
+                (FlyoutWindow w, ShellViewModel vm, _) = MakeWithSetup(state, exe);
+                vm.SetFlyoutVisible(true);
+                ((IFlyout)w).Show();
+                Sta.Flush();
+                var content = (FrameworkElement)w.Content;
+                content.UpdateLayout();
+                int pw = (int)Math.Ceiling(content.ActualWidth + content.Margin.Left + content.Margin.Right);
+                int ph = (int)Math.Ceiling(content.ActualHeight + content.Margin.Top + content.Margin.Bottom);
+                var bmp = new RenderTargetBitmap(pw, ph, 96, 96, PixelFormats.Pbgra32);
+                var host = new Border { Width = pw, Height = ph, Background = new VisualBrush(content) { Stretch = Stretch.None, AlignmentX = AlignmentX.Left, AlignmentY = AlignmentY.Top, ViewboxUnits = BrushMappingMode.Absolute, Viewbox = new Rect(-content.Margin.Left, -content.Margin.Top, pw, ph) } };
+                host.Measure(new Size(pw, ph));
+                host.Arrange(new Rect(0, 0, pw, ph));
+                bmp.Render(host);
+                var enc = new PngBitmapEncoder();
+                enc.Frames.Add(BitmapFrame.Create(bmp));
+                using FileStream fs = File.Create(Path.Combine(dir, name + ".png"));
+                enc.Save(fs);
+            });
+        }
+    }
+
     [Fact]
     public void Screenshots_RenderedForReview()
     {

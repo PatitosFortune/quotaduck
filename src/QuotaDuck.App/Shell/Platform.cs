@@ -64,6 +64,23 @@ public sealed class WpfDispatcher(Dispatcher dispatcher) : IUiDispatcher
     public void Post(Action action) => dispatcher.BeginInvoke(action);
 }
 
+/// <summary>Plain-text clipboard via WPF; a locked clipboard (another app holding it) is reported as a failure, never thrown.</summary>
+public sealed class WpfClipboard : Services.IClipboard
+{
+    public bool TrySetText(string text)
+    {
+        try
+        {
+            System.Windows.Clipboard.SetText(text);
+            return true;
+        }
+        catch (System.Runtime.InteropServices.ExternalException)
+        {
+            return false;
+        }
+    }
+}
+
 public sealed class WpfLifetime : IAppLifetime
 {
     public void Shutdown() => System.Windows.Application.Current?.Shutdown();
@@ -110,6 +127,7 @@ public sealed class WinFormsTray : ITray
         _icon = new WinForms.NotifyIcon { Icon = _image, Visible = true };
         _icon.MouseDown += (_, e) =>
         {
+            Remember();                                                          // where the icon is: the flyout opens next to this point
             if (e.Button == WinForms.MouseButtons.Right && _menu is null)
             {
                 _menu = new WinForms.ContextMenuStrip();
@@ -120,12 +138,22 @@ public sealed class WinFormsTray : ITray
         };
         _icon.MouseClick += (_, e) =>
         {
+            Remember();
             if (e.Button == WinForms.MouseButtons.Left)
             {
                 Toggled?.Invoke();
             }
         };
         SetTooltip(initialTooltip);
+    }
+
+    public PxPoint? LastAnchor { get; private set; }
+
+    /// <summary>The cursor position (screen pixels) at the moment of a click on the icon: the documented way to know where the icon is.</summary>
+    internal void Remember()
+    {
+        System.Drawing.Point p = WinForms.Control.MousePosition;
+        LastAnchor = new PxPoint(p.X, p.Y);
     }
 
     public event Action? Toggled;

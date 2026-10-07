@@ -56,3 +56,19 @@ disposed (cancels an in-flight Codex read; the runner kills the process tree) ->
 ## Known limits of this placeholder gate
 WinForms `NotifyIcon` is used for the tray (adds the WinForms assembly; a direct `Shell_NotifyIcon` implementation would remove it — decide
 with the art gate). The flyout is not anchored to the actual tray position. No settings UI (provider enable flags exist only in code).
+
+## v1 polish gate
+
+### First-run Claude setup guide
+Shown on the Claude card only while Claude has never reported (`ProviderIssue.WaitingForTerminalClaudeCode`), and only the flyout is involved: when it opens in that state the shell asks the coordinator's `ClaudeSetupProbe` for a four-value answer (`Unknown`, `NotConfigured`, `BridgeConfigured`, `OtherStatusLine`). The probe is the one narrow exception to "no Claude config access": it reads `%USERPROFILE%\.claude\settings.json` (real profile from the process token), streamed once, bounded to 256 KiB, every property except top-level `statusLine` skipped unread, the command compared in place for `quotaduck-statusline` and never stored. Project-level settings are never looked at. Nothing is ever written; QuotaDuck never edits Claude settings.
+Variants: *Connect* (no status line: paste-this `statusLine` entry), *TapExisting* (another status line exists: never replaced; add the silent `--tap` line to the user's own script), *ConnectedWaiting* (bridge already wired: waiting for the first reply). Every variant states the observed limitation (VS Code Claude panel and Claude Desktop Code tab did not trigger the status line; only terminal sessions report) and how to undo. The Copy button puts the snippet on the clipboard; the user pastes it. The bridge path is filled in when `quotaduck-statusline.exe` sits beside the app, otherwise a visible placeholder with an instruction.
+
+### Tray anchoring
+`Shell/FlyoutPlacement.cs` is pure. Inputs: monitors (bounds, work area, per-monitor DPI), the screen position of the tray click, flyout size. The taskbar edge is inferred from work area vs bounds (bottom/top/left/right/auto-hidden); the flyout sits next to the click, a DPI-scaled gap off the taskbar, clamped inside that monitor's work area, never larger than it (taller content scrolls). A stale anchor picks the nearest monitor; no anchor or any native failure falls back to the bottom-right corner of the primary work area. Only documented APIs (`Screen.AllScreens`, `GetDpiForMonitor`, `SetWindowPos`; `Shell/NativeWindows.cs` is the only file with native interop). No shell hooks, no undocumented taskbar APIs.
+
+### Runtime prerequisite
+Framework-dependent for v1. No custom bootstrapper: the .NET apphost itself shows a dialog when the .NET Desktop Runtime is missing (names it and links to the official Microsoft download page), and nothing is installed silently. `ArchitectureTests` pins the framework-dependent settings (`UseAppHost`, no self-contained, `WindowsDesktop` runtimeconfig framework).
+
+### Real-desktop checks (bounded)
+Done on the owner's Windows 11 desktop by UI Automation, with synthetic nothing: tray right-click (menu created lazily on first right-click), Open, Exit, Esc, toggle hide/show, Tab navigation, Claude "waiting" guide, Codex refresh (real quota-only reads; cooldown disables the button). Flyout anchored ~8 px above the taskbar centred on the icon. A guide plus a populated Codex card is ~841 DIP tall: capped to the work area and scrollable.
+Not toggled by the assistant (system settings): high contrast, reduced motion, DPI scaling, extra monitors. Covered by unit/placement tests only. **Owner checklist:** (1) Settings > Accessibility > Contrast themes: open the flyout, text readable, numbers visible. (2) Settings > Accessibility > Visual effects > Animation effects off: open the flyout, duck frames static. (3) Display scale 125%/150%: flyout next to the icon, fully on screen. (4) A second monitor with the taskbar there, if available.

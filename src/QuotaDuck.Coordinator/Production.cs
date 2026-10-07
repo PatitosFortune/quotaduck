@@ -68,3 +68,9 @@ public static class QuotaCoordinatorFactory
             new ThreadPoolTimerScheduler());
     }
 }
+
+public static class ClaudeSetupProbeFactory
+{
+    /// <summary>The probe for the real user-level Claude Code settings (profile directory from the process token). Read-only.</summary>
+    public static IClaudeSetupProbe CreateDefault() => new ClaudeSetupProbe(ClaudeSetupProbe.DefaultPath());
+}

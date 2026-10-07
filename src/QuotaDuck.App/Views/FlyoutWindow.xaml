@@ -13,6 +13,7 @@
     <Window.Resources>
         <views:ToneBrushConverter x:Key="ToneBrush" />
         <views:NullToVisibilityConverter x:Key="Show" />
+        <BooleanToVisibilityConverter x:Key="BoolToVisible" />
 
         <!-- one row per window the provider really reports; nothing is padded to look symmetric -->
         <DataTemplate x:Key="WindowRow">
@@ -47,17 +48,45 @@
                     <views:PixelImage Scene="{Binding Pond}" TargetWidth="300" HorizontalAlignment="Center" Margin="0,6,0,0"
                                       AutomationProperties.Name="{Binding PondDescription}" />
                     <TextBlock Text="{Binding Note}" TextWrapping="Wrap" Opacity="0.85" Margin="0,2,0,0" Visibility="{Binding Note, Converter={StaticResource Show}}" />
-                    <ItemsControl ItemsSource="{Binding Windows}" ItemTemplate="{StaticResource WindowRow}" IsTabStop="False" />
+                    <ItemsControl ItemsSource="{Binding Windows}" ItemTemplate="{StaticResource WindowRow}" IsTabStop="False"
+                                  Visibility="{Binding ShowWindows, Converter={StaticResource BoolToVisible}}" />
+
+                    <!-- First-run Claude setup guide: only while Claude has never reported. Text and a snippet the user pastes themselves. -->
+                    <StackPanel Visibility="{Binding Setup, Converter={StaticResource Show}}" Margin="0,8,0,0" AutomationProperties.Name="{Binding Setup.AccessibleName}">
+                        <TextBlock Text="{Binding Setup.Title}" FontWeight="Bold" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding Setup.Intro}" TextWrapping="Wrap" Opacity="0.9" Margin="0,3,0,0" FontSize="12" />
+                        <Expander Header="Why only terminal sessions?" Margin="0,4,0,0" FontSize="12" IsExpanded="False"
+                                  AutomationProperties.Name="Why only terminal sessions? Show details">
+                            <TextBlock Text="{Binding Setup.Limitation}" TextWrapping="Wrap" Margin="16,3,0,0" FontSize="12" Opacity="0.9" />
+                        </Expander>
+                        <TextBlock Text="{Binding Setup.StepsBefore}" TextWrapping="Wrap" Margin="0,6,0,3" FontSize="12"
+                                   Visibility="{Binding Setup.HasSnippet, Converter={StaticResource BoolToVisible}}" />
+                        <TextBox Text="{Binding Setup.Snippet, Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap" FontFamily="Consolas" FontSize="12"
+                                 Padding="4" AutomationProperties.Name="Status line setup text, read only; select it or use Copy"
+                                 Visibility="{Binding Setup.HasSnippet, Converter={StaticResource BoolToVisible}}" />
+                        <DockPanel Margin="0,4,0,0" Visibility="{Binding Setup.HasSnippet, Converter={StaticResource BoolToVisible}}">
+                            <Button DockPanel.Dock="Left" MinWidth="72" Padding="8,2" Content="{Binding Setup.CopyLabel}" Click="OnCopySetupClick"
+                                    AutomationProperties.Name="Copy the setup text to the clipboard" />
+                            <TextBlock Text="{Binding Setup.PathNote}" TextWrapping="Wrap" FontSize="11.5" Opacity="0.8" Margin="8,0,0,0" VerticalAlignment="Center"
+                                       Visibility="{Binding Setup.PathNote, Converter={StaticResource Show}}" />
+                        </DockPanel>
+                        <TextBlock Text="{Binding Setup.StepsAfter}" TextWrapping="Wrap" Margin="0,6,0,0" FontSize="12" Visibility="{Binding Setup.StepsAfter, Converter={StaticResource Show}}" />
+                        <TextBlock Text="{Binding Setup.RemoveText}" TextWrapping="Wrap" Margin="0,6,0,0" FontSize="11.5" Opacity="0.8" />
+                    </StackPanel>
+
                     <TextBlock Text="{Binding Footer}" TextWrapping="Wrap" Opacity="0.7" FontSize="11.5" Margin="0,6,0,0" Visibility="{Binding Footer, Converter={StaticResource Show}}" />
                 </StackPanel>
             </Border>
         </DataTemplate>
     </Window.Resources>
 
-    <StackPanel Margin="10">
-        <ContentControl Content="{Binding Current.Claude}" ContentTemplate="{StaticResource ProviderCard}" IsTabStop="False" />
-        <ContentControl Content="{Binding Current.Codex}" ContentTemplate="{StaticResource ProviderCard}" IsTabStop="False" />
-        <TextBlock Text="{Binding Current.RefreshFeedback}" TextWrapping="Wrap" Visibility="{Binding Current.RefreshFeedback, Converter={StaticResource Show}}"
-                   Foreground="{DynamicResource {x:Static SystemColors.HotTrackBrushKey}}" AutomationProperties.LiveSetting="Polite" />
-    </StackPanel>
+    <!-- A tall guide (or a small screen / large text scale) scrolls instead of running off the screen: the window's MaxHeight is set to the work area -->
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
+        <StackPanel Margin="10">
+            <ContentControl Content="{Binding Current.Claude}" ContentTemplate="{StaticResource ProviderCard}" IsTabStop="False" />
+            <ContentControl Content="{Binding Current.Codex}" ContentTemplate="{StaticResource ProviderCard}" IsTabStop="False" />
+            <TextBlock Text="{Binding Current.RefreshFeedback}" TextWrapping="Wrap" Visibility="{Binding Current.RefreshFeedback, Converter={StaticResource Show}}"
+                       Foreground="{DynamicResource {x:Static SystemColors.HotTrackBrushKey}}" AutomationProperties.LiveSetting="Polite" />
+        </StackPanel>
+    </ScrollViewer>
 </Window>

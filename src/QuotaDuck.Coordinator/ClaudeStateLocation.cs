@@ -23,6 +23,23 @@ internal static unsafe partial class ClaudeStateLocation
     [return: MarshalAs(UnmanagedType.Bool)]
     private static partial bool GetUserProfileDirectory(nint token, char* buffer, ref uint size);
 
+    /// <summary>The current user's profile directory from the process-user TOKEN (never from USERPROFILE or any other variable); null if unavailable.</summary>
+    public static string? UserProfileDirectory()
+    {
+        try
+        {
+            using WindowsIdentity identity = WindowsIdentity.GetCurrent();
+            char* buffer = stackalloc char[520];
+            uint size = 520;
+            string? profile = GetUserProfileDirectory(identity.Token, buffer, ref size) ? new string(buffer) : null;
+            return profile is not null && Path.IsPathFullyQualified(profile) ? Path.GetFullPath(profile).TrimEnd('\\') : null;
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
+
     public static string? DefaultDirectory() =>
         TryGetLocalAppData(out string root) ? Path.Combine(root, "QuotaDuck", "bridge") : null;
 

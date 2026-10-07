@@ -53,6 +53,7 @@ public sealed class ShellController
         _tray.ExitRequested += OnExitRequested;
         _flyout.VisibleChanged += OnFlyoutVisibleChanged;
         _flyout.RefreshRequested += OnRefreshRequested;
+        _flyout.CopySetupRequested += _vm.CopySetup;
         _environment.Resumed += _service.NotifyEnvironmentChanged;               // the coordinator's single entry point; no logic duplicated here
         _environment.SessionUnlocked += _service.NotifyEnvironmentChanged;
         _environment.TimeChanged += _service.NotifyEnvironmentChanged;
@@ -65,6 +66,7 @@ public sealed class ShellController
     {
         if (!_exiting)
         {
+            _flyout.Anchor = _tray.LastAnchor;                                   // next to the icon the user clicked (null: fallback corner)
             _flyout.Show();
         }
     }
@@ -84,6 +86,7 @@ public sealed class ShellController
         }
         else
         {
+            _flyout.Anchor = _tray.LastAnchor;
             _flyout.Show();
         }
     }

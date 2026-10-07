@@ -28,6 +28,11 @@ public sealed class ShellViewModel : INotifyPropertyChanged
     private DateTimeOffset _feedbackUntil;
     private bool _flyoutVisible;
     private int _frame;
+    private readonly IClaudeSetupInfo? _setupInfo;
+    private readonly IClipboard? _clipboard;
+    private Coordinator.ClaudeSetupState? _setupState;
+    private DateTimeOffset _copiedUntil;
+    private DateTimeOffset _copyFailedUntil;
 
     public ShellViewModel(
         IQuotaService service,
@@ -35,8 +40,12 @@ public sealed class ShellViewModel : INotifyPropertyChanged
         TimeProvider clock,
         TimeZoneInfo zone,
         IUiTicker? fastTicker = null,
-        Func<bool>? reducedMotion = null)
+        Func<bool>? reducedMotion = null,
+        IClaudeSetupInfo? setupInfo = null,
+        IClipboard? clipboard = null)
     {
+        _setupInfo = setupInfo;
+        _clipboard = clipboard;
         _service = service;
         _ticker = ticker;
         _clock = clock;
@@ -68,7 +77,10 @@ public sealed class ShellViewModel : INotifyPropertyChanged
             _feedback = RefreshFeedback.None;
         }
 
-        ShellPresentation raw = Presenter.Present(_service.Capture(), _feedback, _zone);
+        SetupContext? setup = _setupInfo is not null && _setupState is { } st
+            ? new SetupContext(st, _setupInfo.BridgeExePath, now < _copiedUntil, now < _copyFailedUntil)
+            : null;
+        ShellPresentation raw = Presenter.Present(_service.Capture(), _feedback, _zone, setup);
         bool allow = _flyoutVisible && !ReducedMotion;
         bool tween = _claudeAnimator.Observe(raw.Claude.Pond, allow) | _codexAnimator.Observe(raw.Codex.Pond, allow);
         if (tween && _fastTicker is { IsRunning: false })
@@ -100,6 +112,7 @@ public sealed class ShellViewModel : INotifyPropertyChanged
         {
             ReducedMotion = _reducedMotion();
             _frame = 0;
+            CheckSetupIfNeeded();
             Refresh();
             _ticker.Start(OnTick);
         }
@@ -111,6 +124,63 @@ public sealed class ShellViewModel : INotifyPropertyChanged
         }
 
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(FlyoutVisible)));
+    }
+
+    /// <summary>
+    /// Only when the flyout opens AND Claude has never reported: one narrow look at the user-level status-line setting (the coordinator's
+    /// probe returns a four-value state; nothing else is read). Nothing is checked while hidden, while Claude has data, or on a timer.
+    /// </summary>
+    private void CheckSetupIfNeeded()
+    {
+        if (_setupInfo is null)
+        {
+            return;
+        }
+
+        if (_service.Capture().Claude.Issue != ProviderIssue.WaitingForTerminalClaudeCode)
+        {
+            _setupState = null;
+            return;
+        }
+
+        try
+        {
+            _setupState = _setupInfo.Check();
+        }
+        catch (Exception)
+        {
+            _setupState = Coordinator.ClaudeSetupState.Unknown;
+        }
+    }
+
+    /// <summary>The Copy button of the setup guide: the snippet goes to the clipboard (the user pastes it into their own settings).</summary>
+    public void CopySetup()
+    {
+        if (_setupInfo is null || _clipboard is null || _setupState is not { } st)
+        {
+            return;
+        }
+
+        string snippet = SetupGuidePresenter.SnippetFor(new SetupContext(st, _setupInfo.BridgeExePath, false));
+        if (snippet.Length == 0)
+        {
+            return;
+        }
+
+        bool ok;
+        try
+        {
+            ok = _clipboard.TrySetText(snippet);
+        }
+        catch (Exception)
+        {
+            ok = false;
+        }
+
+        DateTimeOffset now = _clock.GetUtcNow();
+        _copiedUntil = ok ? now + TimeSpan.FromSeconds(3) : default;
+        _copyFailedUntil = ok ? default : now + TimeSpan.FromSeconds(6);
+        Refresh();
     }
 
     private void OnTick()
@@ -163,5 +233,5 @@ public sealed class ShellViewModel : INotifyPropertyChanged
 
     private static bool Same(ProviderCardModel a, ProviderCardModel b) =>
         a.Name == b.Name && a.Headline == b.Headline && a.Note == b.Note && a.Tone == b.Tone && a.Footer == b.Footer
-        && a.Refresh == b.Refresh && a.Pond == b.Pond && a.PondDescription == b.PondDescription && a.Windows.SequenceEqual(b.Windows);
+        && a.Refresh == b.Refresh && a.Pond == b.Pond && a.PondDescription == b.PondDescription && a.Setup == b.Setup && a.Windows.SequenceEqual(b.Windows);
 }

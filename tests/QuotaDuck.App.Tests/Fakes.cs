@@ -131,8 +131,17 @@ internal sealed class FakeFlyout : IFlyout
 
     public event Action? RefreshRequested;
 
+    public event Action? CopySetupRequested;
+
+    public PxPoint? Anchor { get; set; }
+
+    public List<PxPoint?> AnchorsAtShow { get; } = [];
+
+    public void ClickCopySetup() => CopySetupRequested?.Invoke();
+
     public void Show()
     {
+        AnchorsAtShow.Add(Anchor);
         ShowCalls++;
         if (!IsVisible)
         {
@@ -158,6 +167,8 @@ internal sealed class FakeTray : ITray
 {
     public List<string> Tooltips { get; } = [];
     public bool Disposed { get; private set; }
+
+    public PxPoint? LastAnchor { get; set; }
 
     public event Action? Toggled;
 
@@ -268,16 +279,54 @@ internal sealed class ShellRig
     public FakeEnvironment Environment { get; } = new();
     public FakeLifetime Lifetime { get; } = new();
     public FakeClock Clock { get; } = new(Snap.T0);
+    public FakeSetupInfo SetupInfo { get; } = new();
+    public FakeClipboard Clipboard { get; } = new();
     public ShellViewModel Vm { get; }
     public ShellController Controller { get; }
 
     public ShellRig(bool start = true)
     {
-        Vm = new ShellViewModel(Service, Ticker, Clock, Snap.Utc);
+        Vm = new ShellViewModel(Service, Ticker, Clock, Snap.Utc, null, null, SetupInfo, Clipboard);
         Controller = new ShellController(Service, Flyout, Tray, Environment, Dispatcher, Lifetime, Vm);
         if (start)
         {
             Controller.Start();
         }
+    }
+}
+
+internal sealed class FakeSetupInfo : IClaudeSetupInfo
+{
+    public ClaudeSetupState State { get; set; } = ClaudeSetupState.NotConfigured;
+    public string? BridgeExePath { get; set; }
+    public int Checks { get; private set; }
+    public bool Throw { get; set; }
+
+    public ClaudeSetupState Check()
+    {
+        Checks++;
+        return Throw ? throw new IOException("boom") : State;
+    }
+}
+
+internal sealed class FakeClipboard : IClipboard
+{
+    public List<string> Texts { get; } = [];
+    public bool Succeeds { get; set; } = true;
+    public bool Throws { get; set; }
+
+    public bool TrySetText(string text)
+    {
+        if (Throws)
+        {
+            throw new InvalidOperationException("clipboard locked");
+        }
+
+        if (Succeeds)
+        {
+            Texts.Add(text);
+        }
+
+        return Succeeds;
     }
 }
