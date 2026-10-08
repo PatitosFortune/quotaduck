@@ -7,7 +7,7 @@ QuotaDuck is a tiny Windows 11 tray/widget that shows **Claude** and **ChatGPT/C
 ## Hard constraints (do not relax without the owner's explicit approval)
 
 **Independence**
-- Independent clean implementation. `pixelsncodes/tokenfish` is **reference-only**: never copy its source, tests, assets, text, names, constants or project structure. It has no licence.
+- Independent clean implementation. `pixelsncodes/tokenfish` is **reference-only**: never copy its source, tests, assets, text, names, constants or project structure. It has no licence. The no-copy comparison used its commit `71ab591947ebabf6b7e03e0344ceb084665477f7` (record: spec §28).
 
 **Stack**
 - C# / .NET 10 + WPF (unless a spike disproves it). Claude status-line bridge is a **Native AOT** console exe.

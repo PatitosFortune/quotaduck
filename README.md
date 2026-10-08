@@ -105,6 +105,10 @@ powershell -File scripts\release.ps1                                  # builds a
 
 Design notes live in `docs/` (`docs/app`, `docs/bridge`, `docs/codex`, `docs/coordinator`, `docs/art`); project constraints are in `CLAUDE.md`.
 
+## Independence
+
+QuotaDuck is an independent implementation. An existing public project in the same space (TokenFish, `pixelsncodes/tokenfish`, which has no licence) was studied as a **reference only**. No code, tests, assets or product text were copied from it; QuotaDuck's structure, art, naming, tests and constants are its own. A no-copy comparison against that project's commit `71ab591947ebabf6b7e03e0344ceb084665477f7` found only generic or provider-contract-dictated overlap (see `docs/spec/QuotaDuck-Phase1-Audit.md` §28).
+
 ## License
 
 Copyright (c) 2026 Patitos Fortune. MIT, see `LICENSE`. Third-party notices (the .NET Native AOT runtime inside the helper) and the statement that all pond and duck artwork is original and generated are in `NOTICE`.
