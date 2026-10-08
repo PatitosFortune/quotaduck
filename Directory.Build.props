@@ -13,4 +13,14 @@
     <NuGetAudit>true</NuGetAudit>
     <WarningsNotAsErrors>NU1901;NU1902;NU1903;NU1904</WarningsNotAsErrors>
   </PropertyGroup>
+
+  <!-- Version / product metadata: ONE place. scripts/release.ps1 passes -p:SourceRevisionId=<git short hash> so the informational version reads 1.0.0-rc.1+<hash>. -->
+  <PropertyGroup>
+    <Version>1.0.0-rc.1</Version>
+    <Product>QuotaDuck</Product>
+    <Company>Patitos Fortune</Company>
+    <Authors>Patitos Fortune</Authors>
+    <Copyright>Copyright (c) 2026 Patitos Fortune. MIT License.</Copyright>
+    <NeutralLanguage>en</NeutralLanguage>
+  </PropertyGroup>
 </Project>

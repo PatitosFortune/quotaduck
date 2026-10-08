@@ -1,0 +1,13 @@
+# Approved contents of QuotaDuck-<version>-win-x64.zip (one ZIP entry per line, ordinal order). scripts/release.ps1 FAILS if the package differs from this list.
+QuotaDuck/LICENSE
+QuotaDuck/NOTICE
+QuotaDuck/QuotaDuck.Art.dll
+QuotaDuck/QuotaDuck.Codex.dll
+QuotaDuck/QuotaDuck.Coordinator.dll
+QuotaDuck/QuotaDuck.Core.dll
+QuotaDuck/QuotaDuck.deps.json
+QuotaDuck/QuotaDuck.dll
+QuotaDuck/QuotaDuck.exe
+QuotaDuck/QuotaDuck.runtimeconfig.json
+QuotaDuck/README.md
+QuotaDuck/quotaduck-statusline.exe

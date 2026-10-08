@@ -17,9 +17,9 @@ Runtime problems (bad payload, locked/unwritable state, I/O errors) never fail t
 The bridge does **not** wrap or execute another status-line command, and never edits Claude settings.
 
 ## Setup (you apply it; QuotaDuck never edits Claude settings)
-No existing status line — in `~/.claude/settings.json` (Claude Code runs status lines through Git Bash here, so use forward slashes):
+No existing status line — in `~/.claude/settings.json` (Claude Code runs status lines through Git Bash here, so use forward slashes, and the path is ALWAYS a quoted shell word inside the JSON string, so folders with spaces, apostrophes, `$` or non-ASCII characters work; the app's generated snippet does this for you):
 ```json
-{ "statusLine": { "type": "command", "command": "C:/Path/To/quotaduck-statusline.exe" } }
+{ "statusLine": { "type": "command", "command": "\"C:/Path/To/quotaduck-statusline.exe\"" } }
 ```
 Existing status line script — add one line that feeds the same JSON to the bridge in **tap** mode (your own output is untouched):
 ```bash

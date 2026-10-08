@@ -22,7 +22,7 @@ public class SetupGuideTests
         using JsonDocument doc = JsonDocument.Parse(snippet);
         JsonElement entry = doc.RootElement.GetProperty("statusLine");
         Assert.Equal("command", entry.GetProperty("type").GetString());
-        Assert.Equal("C:/Tools/quotaduck-statusline.exe", entry.GetProperty("command").GetString());
+        Assert.Equal("\"C:/Tools/quotaduck-statusline.exe\"", entry.GetProperty("command").GetString());     // always a quoted shell word
         Assert.Equal(2, entry.EnumerateObject().Count());                                 // nothing else (no wrapper, no extra options)
         Assert.Single(doc.RootElement.EnumerateObject());
     }
@@ -46,7 +46,7 @@ public class SetupGuideTests
     {
         string snippet = SetupGuidePresenter.StatusLineEntry(SetupGuidePresenter.ExeText("C:\\x\"y\\quotaduck-statusline.exe"));
         using JsonDocument doc = JsonDocument.Parse(snippet);                              // still valid
-        Assert.Equal("C:/xy/quotaduck-statusline.exe", doc.RootElement.GetProperty("statusLine").GetProperty("command").GetString());
+        Assert.Equal("\"C:/xy/quotaduck-statusline.exe\"", doc.RootElement.GetProperty("statusLine").GetProperty("command").GetString());
     }
 
     // ---------------- the three variants ----------------

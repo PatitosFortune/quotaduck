@@ -5,6 +5,7 @@
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>   <!-- required by the source-generated native imports (Shell/NativeWindows.cs only) -->
+    <Description>QuotaDuck - Claude and Codex quota in a tiny Windows tray widget</Description>
     <AssemblyName>QuotaDuck</AssemblyName>
     <RootNamespace>QuotaDuck.App</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>

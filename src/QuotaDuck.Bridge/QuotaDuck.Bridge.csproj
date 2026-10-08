@@ -2,6 +2,7 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
+    <Description>QuotaDuck Claude status-line bridge (reads usage from Claude Code, writes local state only)</Description>
     <AssemblyName>quotaduck-statusline</AssemblyName>
     <RootNamespace>QuotaDuck.Bridge</RootNamespace>
     <!-- Native AOT: publish with `-r win-x64` (scripts/verify-bridge-aot.ps1). Plain `dotnet build` stays a normal managed build for tests. -->
@@ -16,6 +17,10 @@
     <DebugSymbols>false</DebugSymbols>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
   </PropertyGroup>
+  <ItemGroup>
+    <!-- reproducible release: ask the MSVC linker for a content-derived PE timestamp (no wall-clock time in the exe), see scripts/release.ps1 -->
+    <LinkerArg Include="/Brepro" />
+  </ItemGroup>
   <ItemGroup>
     <!-- Windows-only by design (DACL, named mutex semantics, Windows paths). -->
     <AssemblyAttribute Include="System.Runtime.Versioning.SupportedOSPlatformAttribute">

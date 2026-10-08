@@ -96,10 +96,58 @@ public static class SetupGuidePresenter
     /// <summary>The text the Copy button puts on the clipboard (empty for the already-connected variant).</summary>
     public static string SnippetFor(SetupContext c) => Build(c).Snippet;
 
+    /// <summary>
+    /// The settings entry. Claude Code runs the <c>command</c> string through a shell (Git Bash on Windows, established in Step 0), so the path is
+    /// ALWAYS a quoted shell word (spaces, apostrophes, <c>$</c> and non-ASCII characters are all safe) and the whole word is then JSON-escaped.
+    /// </summary>
     public static string StatusLineEntry(string exe) =>
-        "{\n  \"statusLine\": {\n    \"type\": \"command\",\n    \"command\": \"" + exe + "\"\n  }\n}";
+        "{\n  \"statusLine\": {\n    \"type\": \"command\",\n    \"command\": " + JsonString(ShellQuote(exe)) + "\n  }\n}";
 
-    public static string TapLine(string exe) => "echo \"$input\" | \"" + exe + "\" --tap";
+    /// <summary>The same quoted shell word for the tap line, so a <c>$</c> in the path cannot expand there either.</summary>
+    public static string TapLine(string exe) => "echo \"$input\" | " + ShellQuote(exe) + " --tap";
+
+    /// <summary>A POSIX-shell double-quoted word: only the backslash, the double quote, <c>$</c> and the backtick are special inside it, so those are backslash-escaped.</summary>
+    public static string ShellQuote(string path)
+    {
+        var sb = new System.Text.StringBuilder(path.Length + 2).Append('"');
+        foreach (char c in path)
+        {
+            if (c is '\\' or '"' or '$' or '`')
+            {
+                sb.Append('\\');
+            }
+
+            sb.Append(c);
+        }
+
+        return sb.Append('"').ToString();
+    }
+
+    /// <summary>A JSON string literal (quotes, backslashes and control characters escaped; everything else, including non-ASCII, stays readable).</summary>
+    public static string JsonString(string s)
+    {
+        var sb = new System.Text.StringBuilder(s.Length + 2).Append('"');
+        foreach (char c in s)
+        {
+            switch (c)
+            {
+                case '"':
+                    sb.Append("\\\"");
+                    break;
+                case '\\':
+                    sb.Append("\\\\");
+                    break;
+                case < ' ':
+                    sb.Append("\\u").Append(((int)c).ToString("x4", System.Globalization.CultureInfo.InvariantCulture));
+                    break;
+                default:
+                    sb.Append(c);
+                    break;
+            }
+        }
+
+        return sb.Append('"').ToString();
+    }
 
     /// <summary>Forward slashes keep the JSON valid without escaping; the placeholder when the bridge is not beside the app.</summary>
     public static string ExeText(string? bridgePath) =>

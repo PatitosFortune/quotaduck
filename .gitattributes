@@ -1,3 +1,9 @@
 * text=auto
 *.ps1 text eol=crlf
 *.sln text eol=crlf
+
+# Release-package files: LF regardless of a contributor's core.autocrlf (reproducible release hashes).
+README.md text eol=lf
+LICENSE text eol=lf
+NOTICE text eol=lf
+release/* text eol=lf
