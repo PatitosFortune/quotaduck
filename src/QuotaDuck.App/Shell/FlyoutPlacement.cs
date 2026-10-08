@@ -82,7 +82,7 @@ public static class FlyoutPlacement
             throw new ArgumentException("no monitors", nameof(monitors));
         }
 
-        MonitorArea m = ChooseMonitor(monitors, anchor);
+        MonitorArea m = MonitorFor(monitors, anchor);
         int w = Math.Max(1, (int)Math.Round(widthDip * m.DpiScale));
         int h = Math.Max(1, (int)Math.Round(heightDip * m.DpiScale));
         int gap = Math.Max(1, (int)Math.Round(GapDip * m.DpiScale));
@@ -132,7 +132,7 @@ public static class FlyoutPlacement
     }
 
     /// <summary>The monitor containing the anchor; for an anchor outside every monitor (stale after a display change) the nearest one; with no anchor the primary.</summary>
-    private static MonitorArea ChooseMonitor(IReadOnlyList<MonitorArea> monitors, PxPoint? anchor)
+    public static MonitorArea MonitorFor(IReadOnlyList<MonitorArea> monitors, PxPoint? anchor)
     {
         if (anchor is { } a)
         {

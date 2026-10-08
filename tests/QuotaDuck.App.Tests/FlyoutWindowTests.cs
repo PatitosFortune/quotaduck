@@ -205,10 +205,11 @@ public class FlyoutWindowTests
             vm.Refresh();
             Sta.Flush();
             string[] live = Texts(w);
-            Assert.Contains("42% used", live);
-            Assert.Contains("58% left", live);
-            Assert.Contains("31% used", live);
-            Assert.Contains(live, x => x == "Resets in 3 h (13:00) · Last changed 3 min ago");
+            Assert.Contains("58% left", live);                                              // % left is the one visible percentage
+            Assert.Contains("69% left", live);
+            Assert.DoesNotContain(live, x => x.Contains("% used", StringComparison.Ordinal));
+            Assert.Contains("Resets in 3 h · 13:00", live);
+            Assert.Contains("Last changed 3 min ago", live);
             Assert.Contains("Reported by Claude Code", live);
             Assert.Contains("Up to date", live);
             Assert.Contains("Claude reports only from terminal Claude Code sessions.", live);
@@ -293,7 +294,7 @@ public class FlyoutWindowTests
         {
             (FlyoutWindow w, _, _, _) = Make();
             Assert.True(w.UseLayoutRounding);
-            Assert.Equal(SizeToContent.Height, w.SizeToContent);
+            Assert.Equal(SizeToContent.WidthAndHeight, w.SizeToContent);
             Assert.False(w.Topmost);                                                    // no always-on-top widget in this gate
             Assert.False(w.ShowInTaskbar);
             ((IFlyout)w).Show();
@@ -308,7 +309,8 @@ public class FlyoutWindowTests
     [Fact]
     public void ThePlaceholderUi_HasNoAnimations_SoReducedMotionIsTriviallyHonoured()
     {
-        string xaml = File.ReadAllText(Path.Combine(ArchitectureTests.Root(), "src", "QuotaDuck.App", "Views", "FlyoutWindow.xaml"));
+        string xaml = File.ReadAllText(Path.Combine(ArchitectureTests.Root(), "src", "QuotaDuck.App", "Views", "FlyoutWindow.xaml"))
+                      + File.ReadAllText(Path.Combine(ArchitectureTests.Root(), "src", "QuotaDuck.App", "Views", "CompactFlyoutContent.xaml"));
         foreach (string anim in new[] { "Storyboard", "Animation", "BeginStoryboard", "EventTrigger", "Transition" })
         {
             Assert.DoesNotContain(anim, xaml);
@@ -326,8 +328,46 @@ public class FlyoutWindowTests
         return (new FlyoutWindow(vm), vm, clip);
     }
 
+    private static Button SetUpButton(FlyoutWindow w) => VisibleButtons(w).Single(b => AutomationProperties.GetName(b).Contains("Claude Code", StringComparison.Ordinal));
+
+    private static void Click(Button b) => b.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
+
+    private static bool ShowsText(FlyoutWindow w, string text) => Sta.Descendants<TextBlock>(w).Any(tb => tb.IsVisible && tb.Text == text);
+
     [Fact]
-    public void TheSetupGuide_ShowsTheSnippetAndACopyButton_InPlaceOfTheEmptyRows_AndCopyRaisesTheEvent()
+    public void FirstRun_ShowsACompactSetUpPrompt_TheGuideOpensBelowTheCards_AndCollapsesAgain()
+    {
+        Sta.Run(() =>
+        {
+            (FlyoutWindow w, ShellViewModel vm, _) = MakeWithSetup(ClaudeSetupState.NotConfigured);
+            vm.SetFlyoutVisible(true);
+            ((IFlyout)w).Show();
+            Sta.Flush();
+            Assert.True(ShowsText(w, "Waiting for terminal setup"));
+            Assert.False(ShowsText(w, "Connect Claude Code (one-time setup)"));              // the guide is NOT embedded: the normal two-card layout stays
+            Assert.DoesNotContain(Sta.Descendants<TextBox>(w), x => x.IsVisible);
+            Assert.Equal("Set up", SetUpButton(w).Content);
+            Assert.Equal(2, VisibleButtons(w).Length);                                       // Set up (Claude) + Refresh (Codex)
+            double collapsedHeight = w.ActualHeight;
+
+            Click(SetUpButton(w));                                                           // expand
+            Sta.Flush();
+            Assert.True(vm.SetupExpanded);
+            Assert.True(ShowsText(w, "Connect Claude Code (one-time setup)"));
+            Assert.Equal("Hide", SetUpButton(w).Content);
+            Assert.True(w.ActualHeight > collapsedHeight + 150);
+            Assert.True(ShowsText(w, "Not read yet"));                                       // Codex untouched while the guide is open
+
+            Click(SetUpButton(w));                                                           // collapse again: provider state untouched
+            Sta.Flush();
+            Assert.False(vm.SetupExpanded);
+            Assert.False(ShowsText(w, "Connect Claude Code (one-time setup)"));
+            Assert.Equal(collapsedHeight, w.ActualHeight, 1);
+        });
+    }
+
+    [Fact]
+    public void TheExpandedGuide_ShowsTheSnippetAndACopyButton_AndCopyRaisesTheEvent()
     {
         Sta.Run(() =>
         {
@@ -336,47 +376,78 @@ public class FlyoutWindowTests
             w.CopySetupRequested += () => copies++;
             vm.SetFlyoutVisible(true);
             ((IFlyout)w).Show();
+            vm.ToggleSetup();
             Sta.Flush();
             string[] texts = Texts(w);
             Assert.Contains("Connect Claude Code (one-time setup)", texts);
-            Assert.Contains("Why only terminal sessions?", Sta.Descendants<System.Windows.Controls.Expander>(w).Select(x => (string)x.Header));
             System.Windows.Controls.Expander more = Sta.Descendants<System.Windows.Controls.Expander>(w).Single(x => x.IsVisible);
-            Assert.False(more.IsExpanded);                                                 // the details are one keyboard action away, collapsed to keep the flyout short
+            Assert.Equal("Why only terminal sessions?", (string)more.Header);
+            Assert.False(more.IsExpanded);                                                 // the details are one keyboard action away, collapsed to keep the guide short
             more.IsExpanded = true;
             Sta.Flush();
             Assert.Contains(Texts(w), t => t.Contains("did not trigger the status line", StringComparison.Ordinal));
             Assert.Contains(texts, t => t.Contains("never edits your Claude settings", StringComparison.Ordinal));
-            Assert.DoesNotContain("No data", Sta.Descendants<TextBlock>(w).Where(x => x.IsVisible).Select(x => x.Text));   // the two "No data" rows are replaced by the guide
 
             TextBox snippet = Sta.Descendants<TextBox>(w).Single(t => t.IsVisible);
             Assert.True(snippet.IsReadOnly);
             Assert.Contains("\"statusLine\"", snippet.Text);
             Assert.True(snippet.Focusable);                                                // selectable by keyboard too
 
-            Button[] buttons = VisibleButtons(w);
-            Assert.Equal(2, buttons.Length);                                               // Copy (Claude's guide) and Refresh (Codex)
-            Button copy = buttons.Single(b => AutomationProperties.GetName(b).StartsWith("Copy", StringComparison.Ordinal));
+            Button copy = VisibleButtons(w).Single(b => AutomationProperties.GetName(b).StartsWith("Copy", StringComparison.Ordinal));
             Assert.Equal("Copy", copy.Content);
-            copy.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
+            Click(copy);
             Assert.Equal(1, copies);
-            Assert.Equal("Refresh Codex quota", AutomationProperties.GetName(buttons.Single(b => b != copy)));
+            Assert.Contains(VisibleButtons(w), b => AutomationProperties.GetName(b) == "Refresh Codex quota");
         });
     }
 
     [Fact]
-    public void TheSetupGuide_IsGone_OnceClaudeHasData_AndOnlyRefreshRemains()
+    public void TheSetupPrompt_AndGuide_AreGone_OnceClaudeHasReported_AndOnlyRefreshRemains()
     {
         Sta.Run(() =>
         {
             (FlyoutWindow w, ShellViewModel vm, _) = MakeWithSetup(ClaudeSetupState.NotConfigured);
             var svc = (FakeService)typeof(ShellViewModel).GetField("_service", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(vm)!;
-            svc.Current = Snap.Make(Snap.T0, new ClaudeState(Snap.Rec(42, Snap.T0.AddHours(3), Snap.T0.AddMinutes(-3)), null));
             vm.SetFlyoutVisible(true);
             ((IFlyout)w).Show();
+            vm.ToggleSetup();
             Sta.Flush();
+            Assert.True(vm.SetupExpanded);
+            svc.Current = Snap.Make(Snap.T0, new ClaudeState(Snap.Rec(42, Snap.T0.AddHours(3), Snap.T0.AddMinutes(-3)), null));       // Claude reports
+            vm.Refresh();
+            Sta.Flush();
+            Assert.False(vm.SetupExpanded);                                                // the open guide closes by itself
             Assert.DoesNotContain(Sta.Descendants<TextBox>(w), t => t.IsVisible);
+            Assert.False(ShowsText(w, "Waiting for terminal setup"));
             Assert.Equal("Refresh Codex quota", AutomationProperties.GetName(Assert.Single(VisibleButtons(w))));
-            Assert.Contains("42% used", Texts(w));
+            Assert.Contains("58% left", Texts(w));
+        });
+    }
+
+    [Fact]
+    public void ToggleSetup_DoesNothing_WhenThereIsNoGuide()
+    {
+        var service = new FakeService { Current = Snap.Make(Snap.T0, new ClaudeState(Snap.Rec(42, Snap.T0.AddHours(3), Snap.T0.AddMinutes(-3)), null), Snap.Codex(Snap.T0)) };
+        var vm = new ShellViewModel(service, new FakeTicker(), new FakeClock(Snap.T0), Snap.Utc);
+        vm.ToggleSetup();                                                                  // Claude has reported: there is nothing to open
+        Assert.False(vm.SetupExpanded);
+        Assert.Null(vm.Compact.Guide);
+    }
+
+    [Fact]
+    public void NormalFullyConfiguredOperation_NeverScrolls_AndIsLandscapeAndShort()
+    {
+        Sta.Run(() =>
+        {
+            (FlyoutWindow w, ShellViewModel vm, FakeService svc, _) = Make();
+            svc.Current = Snap.Make(Snap.T0, new ClaudeState(Snap.Rec(42, Snap.T0.AddHours(3), Snap.T0.AddMinutes(-3)), Snap.Rec(12, Snap.T0.AddDays(4), Snap.T0.AddMinutes(-3))), Snap.Codex(Snap.T0.AddMinutes(-1)));
+            vm.Refresh();
+            ((IFlyout)w).Show();
+            Sta.Flush();
+            var scroll = Sta.Descendants<System.Windows.Controls.ScrollViewer>(w).First();
+            Assert.Equal(0, scroll.ScrollableHeight, 0.5);
+            Assert.True(w.ActualWidth > w.ActualHeight, $"{w.ActualWidth} x {w.ActualHeight}");
+            Assert.True(w.ActualHeight < 400, $"{w.ActualHeight}");                         // today's vertical layout was ~630
         });
     }
 
@@ -392,6 +463,7 @@ public class FlyoutWindowTests
             var w = new FlyoutWindow(vm, new PlacementMonitors(tiny), mover);
             vm.SetFlyoutVisible(true);
             ((IFlyout)w).Show();
+            vm.ToggleSetup();                                                              // the expanded guide is the tall case
             Sta.Flush();
             Assert.True(w.MaxHeight <= 452 - 16 + 0.5, $"MaxHeight {w.MaxHeight}");
             Assert.True(w.ActualHeight <= w.MaxHeight + 0.5, $"{w.ActualHeight} > {w.MaxHeight}");

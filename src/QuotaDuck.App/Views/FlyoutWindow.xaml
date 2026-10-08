@@ -2,7 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:views="clr-namespace:QuotaDuck.App.Views"
-        Title="QuotaDuck" Width="380" SizeToContent="Height" ResizeMode="NoResize"
+        Title="QuotaDuck" SizeToContent="WidthAndHeight" ResizeMode="NoResize"
         WindowStyle="ToolWindow" ShowInTaskbar="False" ShowActivated="True" Topmost="False"
         UseLayoutRounding="True" SnapsToDevicePixels="True" TextOptions.TextFormattingMode="Ideal"
         FontFamily="Segoe UI" FontSize="13"
@@ -10,83 +10,8 @@
         Foreground="{DynamicResource {x:Static SystemColors.WindowTextBrushKey}}"
         KeyboardNavigation.TabNavigation="Cycle"
         AutomationProperties.Name="QuotaDuck quota">
-    <Window.Resources>
-        <views:ToneBrushConverter x:Key="ToneBrush" />
-        <views:NullToVisibilityConverter x:Key="Show" />
-        <BooleanToVisibilityConverter x:Key="BoolToVisible" />
-
-        <!-- one row per window the provider really reports; nothing is padded to look symmetric -->
-        <DataTemplate x:Key="WindowRow">
-            <StackPanel Margin="0,5,0,0" AutomationProperties.Name="{Binding AccessibleName}">
-                <DockPanel>
-                    <TextBlock Text="{Binding StateText}" DockPanel.Dock="Right" Foreground="{Binding Tone, Converter={StaticResource ToneBrush}}" FontWeight="SemiBold" />
-                    <TextBlock Text="{Binding Label}" FontWeight="SemiBold" />
-                </DockPanel>
-                <views:PixelImage Scene="{Binding Gauge}" TargetWidth="240" HorizontalAlignment="Left" Margin="0,3,0,3"
-                                  Decorative="True" />
-                <DockPanel>
-                    <TextBlock Text="{Binding RemainingText}" DockPanel.Dock="Right" />
-                    <TextBlock Text="{Binding PercentText}" />
-                </DockPanel>
-                <TextBlock Text="{Binding Detail}" TextWrapping="Wrap" Opacity="0.85" FontSize="12" />
-            </StackPanel>
-        </DataTemplate>
-
-        <DataTemplate x:Key="ProviderCard">
-            <Border BorderBrush="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}" BorderThickness="1" CornerRadius="4" Padding="8" Margin="0,0,0,8">
-                <StackPanel>
-                    <DockPanel>
-                        <Button x:Name="RefreshButton" DockPanel.Dock="Right" MinWidth="96" Padding="8,2" Margin="8,0,0,0"
-                                Content="{Binding Refresh.Text}" IsEnabled="{Binding Refresh.Enabled}"
-                                ToolTip="{Binding Refresh.Hint}"
-                                Visibility="{Binding Refresh, Converter={StaticResource Show}}"
-                                Click="OnRefreshClick" AutomationProperties.Name="Refresh Codex quota" />
-                        <TextBlock Text="{Binding Name}" FontSize="16" FontWeight="Bold" VerticalAlignment="Center" />
-                    </DockPanel>
-                    <TextBlock Text="{Binding Headline}" TextWrapping="Wrap" Margin="0,2,0,0" FontWeight="SemiBold"
-                               Foreground="{Binding Tone, Converter={StaticResource ToneBrush}}" />
-                    <views:PixelImage Scene="{Binding Pond}" TargetWidth="300" HorizontalAlignment="Center" Margin="0,6,0,0"
-                                      AutomationProperties.Name="{Binding PondDescription}" />
-                    <TextBlock Text="{Binding Note}" TextWrapping="Wrap" Opacity="0.85" Margin="0,2,0,0" Visibility="{Binding Note, Converter={StaticResource Show}}" />
-                    <ItemsControl ItemsSource="{Binding Windows}" ItemTemplate="{StaticResource WindowRow}" IsTabStop="False"
-                                  Visibility="{Binding ShowWindows, Converter={StaticResource BoolToVisible}}" />
-
-                    <!-- First-run Claude setup guide: only while Claude has never reported. Text and a snippet the user pastes themselves. -->
-                    <StackPanel Visibility="{Binding Setup, Converter={StaticResource Show}}" Margin="0,8,0,0" AutomationProperties.Name="{Binding Setup.AccessibleName}">
-                        <TextBlock Text="{Binding Setup.Title}" FontWeight="Bold" TextWrapping="Wrap" />
-                        <TextBlock Text="{Binding Setup.Intro}" TextWrapping="Wrap" Opacity="0.9" Margin="0,3,0,0" FontSize="12" />
-                        <Expander Header="Why only terminal sessions?" Margin="0,4,0,0" FontSize="12" IsExpanded="False"
-                                  AutomationProperties.Name="Why only terminal sessions? Show details">
-                            <TextBlock Text="{Binding Setup.Limitation}" TextWrapping="Wrap" Margin="16,3,0,0" FontSize="12" Opacity="0.9" />
-                        </Expander>
-                        <TextBlock Text="{Binding Setup.StepsBefore}" TextWrapping="Wrap" Margin="0,6,0,3" FontSize="12"
-                                   Visibility="{Binding Setup.HasSnippet, Converter={StaticResource BoolToVisible}}" />
-                        <TextBox Text="{Binding Setup.Snippet, Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap" FontFamily="Consolas" FontSize="12"
-                                 Padding="4" AutomationProperties.Name="Status line setup text, read only; select it or use Copy"
-                                 Visibility="{Binding Setup.HasSnippet, Converter={StaticResource BoolToVisible}}" />
-                        <DockPanel Margin="0,4,0,0" Visibility="{Binding Setup.HasSnippet, Converter={StaticResource BoolToVisible}}">
-                            <Button DockPanel.Dock="Left" MinWidth="72" Padding="8,2" Content="{Binding Setup.CopyLabel}" Click="OnCopySetupClick"
-                                    AutomationProperties.Name="Copy the setup text to the clipboard" />
-                            <TextBlock Text="{Binding Setup.PathNote}" TextWrapping="Wrap" FontSize="11.5" Opacity="0.8" Margin="8,0,0,0" VerticalAlignment="Center"
-                                       Visibility="{Binding Setup.PathNote, Converter={StaticResource Show}}" />
-                        </DockPanel>
-                        <TextBlock Text="{Binding Setup.StepsAfter}" TextWrapping="Wrap" Margin="0,6,0,0" FontSize="12" Visibility="{Binding Setup.StepsAfter, Converter={StaticResource Show}}" />
-                        <TextBlock Text="{Binding Setup.RemoveText}" TextWrapping="Wrap" Margin="0,6,0,0" FontSize="11.5" Opacity="0.8" />
-                    </StackPanel>
-
-                    <TextBlock Text="{Binding Footer}" TextWrapping="Wrap" Opacity="0.7" FontSize="11.5" Margin="0,6,0,0" Visibility="{Binding Footer, Converter={StaticResource Show}}" />
-                </StackPanel>
-            </Border>
-        </DataTemplate>
-    </Window.Resources>
-
-    <!-- A tall guide (or a small screen / large text scale) scrolls instead of running off the screen: the window's MaxHeight is set to the work area -->
+    <!-- A small work area, a tall setup guide or a large display scale scrolls instead of running off the screen: MaxHeight is the work area. Normal operation never scrolls. -->
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
-        <StackPanel Margin="10">
-            <ContentControl Content="{Binding Current.Claude}" ContentTemplate="{StaticResource ProviderCard}" IsTabStop="False" />
-            <ContentControl Content="{Binding Current.Codex}" ContentTemplate="{StaticResource ProviderCard}" IsTabStop="False" />
-            <TextBlock Text="{Binding Current.RefreshFeedback}" TextWrapping="Wrap" Visibility="{Binding Current.RefreshFeedback, Converter={StaticResource Show}}"
-                       Foreground="{DynamicResource {x:Static SystemColors.HotTrackBrushKey}}" AutomationProperties.LiveSetting="Polite" />
-        </StackPanel>
+        <views:CompactFlyoutContent x:Name="Body" />
     </ScrollViewer>
 </Window>

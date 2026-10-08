@@ -24,6 +24,8 @@ public sealed class ShellViewModel : INotifyPropertyChanged
     private readonly PondAnimator _claudeAnimator = new();
     private readonly PondAnimator _codexAnimator = new();
     private ShellPresentation _current;
+    private CompactPresentation _compact;
+    private bool _setupExpanded;
     private RefreshFeedback _feedback;
     private DateTimeOffset _feedbackUntil;
     private bool _flyoutVisible;
@@ -54,11 +56,18 @@ public sealed class ShellViewModel : INotifyPropertyChanged
         _reducedMotion = reducedMotion ?? (() => false);
         ReducedMotion = _reducedMotion();
         _current = Presenter.Present(service.Capture(), RefreshFeedback.None, zone);
+        _compact = BuildCompact();
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
     public ShellPresentation Current => _current;
+
+    /// <summary>What the compact flyout binds to: the two cards, and the setup guide only while it is expanded.</summary>
+    public CompactPresentation Compact => _compact;
+
+    /// <summary>The first-run guide is open below the cards. Purely a view choice: it never touches provider state, and it closes by itself once Claude has reported.</summary>
+    public bool SetupExpanded => _setupExpanded;
 
     public bool FlyoutVisible => _flyoutVisible;
 
@@ -96,7 +105,14 @@ public sealed class ShellViewModel : INotifyPropertyChanged
         if (!Same(next, _current))
         {
             _current = next;
+            if (next.Claude.Setup is null)
+            {
+                _setupExpanded = false;                                     // Claude has reported (or never needed the guide): nothing to keep open
+            }
+
+            _compact = BuildCompact();
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Current)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Compact)));
         }
     }
 
@@ -152,6 +168,26 @@ public sealed class ShellViewModel : INotifyPropertyChanged
             _setupState = Coordinator.ClaudeSetupState.Unknown;
         }
     }
+
+    /// <summary>The "Set up" / "Hide" button in the Claude card.</summary>
+    public void ToggleSetup()
+    {
+        if (_current.Claude.Setup is null)
+        {
+            return;
+        }
+
+        _setupExpanded = !_setupExpanded;
+        _compact = BuildCompact();
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Compact)));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SetupExpanded)));
+    }
+
+    private CompactPresentation BuildCompact() => new(
+        CompactCard.From(_current.Claude, _setupExpanded),
+        CompactCard.From(_current.Codex),
+        _setupExpanded ? _current.Claude.Setup : null,
+        _current.RefreshFeedback);
 
     /// <summary>The Copy button of the setup guide: the snippet goes to the clipboard (the user pastes it into their own settings).</summary>
     public void CopySetup()

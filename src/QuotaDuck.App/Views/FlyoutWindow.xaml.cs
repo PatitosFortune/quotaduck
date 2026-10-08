@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Threading;
+using QuotaDuck.App.Presentation;
 using QuotaDuck.App.Shell;
 
 namespace QuotaDuck.App.Views;
@@ -9,6 +10,9 @@ namespace QuotaDuck.App.Views;
 /// <summary>The flyout: a plain window that hides instead of closing. All logic is in <see cref="ShellController"/> / <see cref="ShellViewModel"/>.</summary>
 public partial class FlyoutWindow : Window, IFlyout
 {
+    /// <summary>The tool window's frame, in DIPs, used only before the first real measurement.</summary>
+    private const double FrameDip = 16;
+
     private readonly IMonitorSource _monitors;
     private readonly IWindowMover _mover;
     private bool _allowClose;
@@ -21,6 +25,8 @@ public partial class FlyoutWindow : Window, IFlyout
         _mover = mover ?? win32;
         InitializeComponent();
         DataContext = vm;
+        Body.RefreshRequested += () => RefreshRequested?.Invoke();
+        Body.CopySetupRequested += () => CopySetupRequested?.Invoke();
         IsVisibleChanged += (_, _) =>
         {
             VisibleChanged?.Invoke(base.IsVisible);
@@ -68,6 +74,9 @@ public partial class FlyoutWindow : Window, IFlyout
     /// <summary>The last placement computed (for tests and diagnostics): where, on which monitor, next to which taskbar edge.</summary>
     public FlyoutPlacementResult? LastPlacement { get; private set; }
 
+    /// <summary>Side by side or stacked, as last chosen from the target monitor's work-area width (for tests and diagnostics).</summary>
+    public CompactMode LastMode => Body.Mode;
+
     public void AllowClose() => _allowClose = true;
 
     void IFlyout.Show()
@@ -78,10 +87,6 @@ public partial class FlyoutWindow : Window, IFlyout
     }
 
     void IFlyout.Hide() => base.Hide();
-
-    private void OnRefreshClick(object sender, RoutedEventArgs e) => RefreshRequested?.Invoke();
-
-    private void OnCopySetupClick(object sender, RoutedEventArgs e) => CopySetupRequested?.Invoke();
 
     private void ReplaceLater()
     {
@@ -114,8 +119,17 @@ public partial class FlyoutWindow : Window, IFlyout
         {
             IReadOnlyList<MonitorArea> monitors = _monitors.Monitors();
             nint hwnd = new WindowInteropHelper(this).EnsureHandle();
-            double heightDip = ActualHeight > 0 ? ActualHeight : 560;
-            FlyoutPlacementResult r = FlyoutPlacement.Place(monitors, Anchor, Width, heightDip);
+            MonitorArea target = FlyoutPlacement.MonitorFor(monitors, Anchor);
+            CompactMode mode = CompactLayoutPolicy.Choose(target.Work.Width / target.DpiScale, false);       // two cards only where they fit comfortably
+            if (Body.Mode != mode)
+            {
+                Body.Mode = mode;
+                UpdateLayout();
+            }
+
+            double widthDip = ActualWidth > 0 ? ActualWidth : Body.Width + FrameDip;
+            double heightDip = ActualHeight > 0 ? ActualHeight : 360;
+            FlyoutPlacementResult r = FlyoutPlacement.Place(monitors, Anchor, widthDip, heightDip);
             LastPlacement = r;
             MaxHeight = Math.Max(240, (r.Monitor.Work.Height - 2 * Math.Round(FlyoutPlacement.GapDip * r.Monitor.DpiScale)) / r.Monitor.DpiScale);
             _mover.MoveTo(hwnd, r.TopLeft);
@@ -124,8 +138,8 @@ public partial class FlyoutWindow : Window, IFlyout
         {
             Rect wa = SystemParameters.WorkArea;                               // reliable-geometry-unavailable fallback: the old placement
             MaxHeight = Math.Max(240, wa.Height - 24);
-            Left = wa.Right - Width - 12;
-            Top = Math.Max(wa.Top + 8, wa.Bottom - (ActualHeight > 0 ? ActualHeight : 560) - 12);
+            Left = wa.Right - (ActualWidth > 0 ? ActualWidth : Body.Width + FrameDip) - 12;
+            Top = Math.Max(wa.Top + 8, wa.Bottom - (ActualHeight > 0 ? ActualHeight : 360) - 12);
         }
     }
 }

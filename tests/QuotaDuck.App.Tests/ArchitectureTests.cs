@@ -121,13 +121,16 @@ public class ArchitectureTests
     }
 
     [Fact]
-    public void Xaml_HasExactlyOneButton_TheCodexRefresh_AndNothingNamedLikeAClaudeRefresh()
+    public void Xaml_HasExactlyThreeButtons_CodexRefresh_SetUp_Copy_AndNothingNamedLikeAClaudeRefresh()
     {
-        string xaml = File.ReadAllText(Path.Combine(Root(), "src", "QuotaDuck.App", "Views", "FlyoutWindow.xaml"));
-        // exactly two buttons: Codex's Refresh and the setup guide's Copy (the template is shared, but the guide exists only on Claude's card)
-        Assert.Equal(2, System.Text.RegularExpressions.Regex.Matches(xaml, "<Button").Count);
+        string xaml = File.ReadAllText(Path.Combine(Root(), "src", "QuotaDuck.App", "Views", "CompactFlyoutContent.xaml"));
+        string window = File.ReadAllText(Path.Combine(Root(), "src", "QuotaDuck.App", "Views", "FlyoutWindow.xaml"));
+        Assert.DoesNotContain("<Button", window);
+        // exactly three buttons: Codex's Refresh, Claude's first-run "Set up"/"Hide" (shown only while setup is pending) and the guide's Copy
+        Assert.Equal(3, System.Text.RegularExpressions.Regex.Matches(xaml, "<Button").Count);
         Assert.Contains("Refresh Codex quota", xaml);
         Assert.Contains("Copy the setup text to the clipboard", xaml);
+        Assert.Contains("SetupButtonName", xaml);
         Assert.DoesNotContain("Refresh Claude", xaml);
         Assert.DoesNotContain("Fetch", xaml);
     }

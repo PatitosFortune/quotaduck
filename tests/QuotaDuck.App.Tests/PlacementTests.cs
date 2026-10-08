@@ -1,3 +1,4 @@
+using QuotaDuck.App.Presentation;
 using QuotaDuck.App.Shell;
 using QuotaDuck.App.Views;
 
@@ -205,10 +206,10 @@ public class WindowPlacementTests
             Assert.NotEmpty(mover.Moves);
             Assert.All(mover.Moves, m => Assert.NotEqual(0, m.Hwnd));
             (nint _, PxPoint first) = mover.Moves[0];
-            Assert.Equal(1700 - 190, first.X);                                              // centred on the icon horizontally
+            Assert.True(first.X + 664 <= 1920 && first.X >= 1920 - 664 - 1, $"the wide flyout is clamped to the right edge of the work area, x={first.X}");   // centred on 1700 would run off the screen
             Assert.True(mover.Moves.Count >= 2, "second pass after layout");
             PxPoint last = mover.Moves[^1].At;
-            Assert.Equal(1700 - 190, last.X);
+            Assert.Equal(1920 - (int)Math.Round(w.ActualWidth), last.X);
             Assert.True(last.Y + w.ActualHeight <= 1032 - 8 + 1 && last.Y + w.ActualHeight >= 1032 - 8 - 1, $"bottom edge {last.Y + w.ActualHeight} sits one gap above the taskbar");
             Assert.Equal(TaskbarEdge.Bottom, w.LastPlacement!.Edge);
         });
@@ -224,7 +225,31 @@ public class WindowPlacementTests
             var w = new FlyoutWindow(vm, new FakeMonitors(Bottom), mover);
             ((IFlyout)w).Show();
             Sta.Flush();
-            Assert.Equal(1920 - 380 - 8, mover.Moves[^1].At.X);
+            Assert.Equal(1920 - (int)Math.Round(w.ActualWidth) - 8, mover.Moves[^1].At.X);
+            Assert.Equal(CompactMode.SideBySide, w.LastMode);
+        });
+    }
+
+    [Fact]
+    public void AnIconInTheMiddle_CentresTheWideFlyoutOnIt_AndANarrowWorkAreaStacks()
+    {
+        Sta.Run(() =>
+        {
+            var vm = new ShellViewModel(new FakeService(), new FakeTicker(), new FakeClock(Snap.T0), Snap.Utc);
+            var mover = new FakeMover();
+            var w = new FlyoutWindow(vm, new FakeMonitors(Bottom), mover) { Anchor = new PxPoint(960, 1050) };
+            ((IFlyout)w).Show();
+            Sta.Flush();
+            Assert.InRange(mover.Moves[^1].At.X, 960 - (int)Math.Round(w.ActualWidth / 2) - 1, 960 - (int)Math.Round(w.ActualWidth / 2) + 1);
+            w.Hide();
+
+            var narrow = new MonitorArea(new PxRect(0, 0, 1280, 720), new PxRect(0, 0, 1280, 672), 2.0, true);         // 640 DIP wide work area (1280 px at 200%)
+            var vm2 = new ShellViewModel(new FakeService(), new FakeTicker(), new FakeClock(Snap.T0), Snap.Utc);
+            var w2 = new FlyoutWindow(vm2, new FakeMonitors(narrow), new FakeMover()) { Anchor = new PxPoint(1200, 700) };
+            ((IFlyout)w2).Show();
+            Sta.Flush();
+            Assert.Equal(CompactMode.Stacked, w2.LastMode);
+            Assert.True(w2.ActualWidth < 400);
         });
     }
 
