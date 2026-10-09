@@ -11,6 +11,12 @@
         <views:NullToVisibilityConverter x:Key="Show" />
         <BooleanToVisibilityConverter x:Key="BoolToVisible" />
 
+        <!-- Accessibility only (no visual effect): WPF names a list item by its ToString(), which for a record is a raw "CompactRowModel { ... }" dump.
+             An explicit name on the item container makes screen readers read the row's own sentence instead. -->
+        <Style x:Key="RowContainer" TargetType="ContentPresenter">
+            <Setter Property="AutomationProperties.Name" Value="{Binding AccessibleName}" />
+        </Style>
+
         <!-- 5-hour / Weekly: label (+ state tag) | "58% left", then the gauge, then the reset line -->
         <DataTemplate x:Key="Row">
             <StackPanel Margin="0,6,0,0" AutomationProperties.Name="{Binding AccessibleName}">
@@ -33,7 +39,7 @@
                     <views:PixelImage Scene="{Binding Pond}" TargetWidth="296" HorizontalAlignment="Center" Margin="0,4,0,2"
                                       AutomationProperties.Name="{Binding PondDescription}" />
                     <TextBlock Text="{Binding Headline}" TextWrapping="Wrap" FontWeight="SemiBold" FontSize="12.5" Foreground="{Binding Tone, Converter={StaticResource ToneBrush}}" />
-                    <ItemsControl ItemsSource="{Binding Rows}" ItemTemplate="{StaticResource Row}" IsTabStop="False"
+                    <ItemsControl ItemsSource="{Binding Rows}" ItemTemplate="{StaticResource Row}" ItemContainerStyle="{StaticResource RowContainer}" IsTabStop="False"
                                   Visibility="{Binding HasRows, Converter={StaticResource BoolToVisible}}" />
                     <TextBlock Text="{Binding Note}" TextWrapping="Wrap" FontSize="11.5" Opacity="0.85" Margin="0,4,0,0" Visibility="{Binding Note, Converter={StaticResource Show}}" />
                     <!-- first run: the one-line setup prompt replaces the rows; the guide itself opens below both cards -->
