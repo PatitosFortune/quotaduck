@@ -75,7 +75,7 @@ Not toggled by the assistant (system settings): high contrast, reduced motion, D
 
 ## Compact two-pond layout (responsive hybrid)
 
-The flyout is two provider cards, Claude on the left and Codex on the right (`Views/CompactFlyoutContent.xaml`, bound to `ShellViewModel.Compact`; `Presentation/CompactLayout.cs` reshapes the existing card models, no new provider logic). Each card: name, pond + duck, one headline, then a 5-hour and a weekly row (label, **% left** as the only visible percentage — "% used" stays in the accessible name —, gauge, compact reset line), a subordinate freshness line, and for Codex the Refresh button / cooldown. Claude has no button. Ducks keep facing the centre. Normal fully-configured operation is about 648 x 297 DIP of content (window ~664 x 336 incl. frame) and never scrolls; the old vertical layout was 380 x 607.
+The flyout is two provider cards, Claude on the left and Codex on the right (`Views/CompactFlyoutContent.xaml`, bound to `ShellViewModel.Compact`; `Presentation/CompactLayout.cs` reshapes the existing card models, no new provider logic). Each card: name, pond + duck, one headline, then a 5-hour and a weekly row (label, **% left** as the only visible percentage — "% used" stays in the accessible name —, gauge, compact reset line), a subordinate freshness line, and for Codex the Refresh button / cooldown. Claude has no refresh button (see "Copy usage as text" below for the Copy buttons both cards now have). Ducks keep facing the centre. Normal fully-configured operation is about 648 x 297 DIP of content (window ~664 x 336 incl. frame) and never scrolls; the old vertical layout was 380 x 607.
 
 **Responsive policy** (`CompactLayoutPolicy`, pure, tested): side by side when the work area of the monitor the tray was clicked on is at least 700 DIP wide; otherwise the same cards stack in one 332-DIP column. Display scale alone never stacks: the pond uses an integer art scale that lands at ~288 DIP at 100/125/150/200%, so the width in DIPs is stable; 150% stays side by side wherever the work area allows.
 **Text size (accessibility):** the policy has a `textScale` input but nothing feeds it. Windows' documented signal (WinRT `UISettings.TextScaleFactor`) needs a Windows-SDK target framework and a WinRT load, and WPF does not scale its own text with it, so wiring it would change nothing visible unless the content were also scaled. Documented limitation, not wired; follow-up if wanted: scale the content by that factor and stack when it exceeds 1.25.
@@ -84,3 +84,50 @@ The flyout is two provider cards, Claude on the left and Codex on the right (`Vi
 
 **High contrast:** card borders are 2 DIP (not hairlines) so side-by-side cards stay distinct; the pond/gauge use the high-contrast palette with hatching, so state does not depend on colour.
 **Placement:** unchanged (`FlyoutPlacement`); the window now sizes to content (`SizeToContent=WidthAndHeight`), the mode is chosen before placement, and the wider window is clamped to the work area like before (tests: right/left edges, left taskbar, 150%, two monitors). The window still caps at the work-area height and scrolls only for tall content (expanded guide on a small screen, stacked mode on a short screen).
+
+## Copy usage as text
+
+Three buttons put a plain-text usage report on the clipboard, for pasting into an AI assistant, notes or an issue: **Copy** in the Claude card, **Copy** in the Codex card, and **Copy both** under the cards. The button briefly reads "Copied" (or "Not copied" if the clipboard was busy) and the same words are announced through the polite live region used for refresh messages.
+
+**Where it lives.** `Presentation/UsageSnapshotText.cs` (pure: `AppSnapshot` + scope + zone -> string; no clock, no I/O) and `ShellViewModel.CopyUsage(ExportScope)`. The report is built from the same `Presenter` status text and Core-derived window views the flyout uses; there is no second collector. The clipboard is the existing `IClipboard` (`WpfClipboard`, plain text).
+
+**What the click does (and does not).** `CopyUsage` calls `IQuotaService.Capture()` at the click, which derives a snapshot at that instant without reading any provider, so `Captured:` is the real copy time and every age is measured at it (not at the last published snapshot). It never starts a Codex read, never touches the Codex cooldown, and never reads any file or setting. A failing clipboard or capture is reported briefly and never thrown.
+
+**Format** (illustrative numbers; ASCII, LF line endings, culture-invariant):
+
+```text
+QuotaDuck usage snapshot
+Captured: 2030-01-01 10:00 +00:00 (when this text was copied; each provider's own data time is listed below)
+Percentages are usage REMAINING; the percentage used is in brackets.
+
+CODEX
+Status: Up to date
+5-hour session: 69% remaining (31% used); resets 2030-01-01 12:58 +00:00 (in 2 h 58 m)
+Weekly: 65% remaining (35% used); resets 2030-01-06 09:58 +00:00 (in 4 d 23 h)
+Last successful read: 2030-01-01 09:58 +00:00 (2 min ago)
+
+CLAUDE
+Status: Reported by Claude Code
+5-hour session: 58% remaining (42% used); resets 2030-01-01 13:00 +00:00 (in 3 h)
+Weekly: 88% remaining (12% used); resets 2030-01-05 10:00 +00:00 (in 4 d)
+Numbers last changed: 2030-01-01 09:57 +00:00 (3 min ago)
+Status line last ran: 2030-01-01 09:59 +00:00 (about 1 min ago)
+Note: Claude reports only from terminal Claude Code sessions; usage elsewhere (VS Code panel, Claude Desktop, claude.ai) may not be reflected.
+```
+
+**Rules.** Remaining is the headline number with used in brackets. Times are local with their UTC offset for that instant (daylight-saving-correct) and always carry the date. *Captured* (when copied) is separate from each provider's own time: Codex's *Last successful read* (a failed attempt never moves it) and Claude's *Numbers last changed* and *Status line last ran*. The last two differ on purpose: Claude Code can keep running the status line while the percentages stay the same. While the status line ran within 10 minutes the status reads "Claude Code is still reporting; the numbers have not changed for a while" rather than "no recent report"; the window values themselves keep their Core state and age. "Status line last ran" is approximate (the bridge records it at most about once a minute).
+
+| Window state | Text |
+|---|---|
+| Fresh | numbers, reset time |
+| Quiet / Sleeping | numbers marked `older reading` / `OLD reading` with their age |
+| Elapsed (reset passed) | `no value (the reset time, ..., has passed; the new value has not been reported yet)`; no number |
+| No data / never reported | `no data`, or only the status line; never 0% |
+| Provider turned off | `Status: Turned off`; nothing else |
+| Provider error | the bounded `IssueText` sentence; last good values (if any) stay marked with their age |
+
+**Privacy.** Only enums, percentages, window labels and timestamps can reach the text: no paths, account or plan data, credentials or raw provider output. A provider-supplied limit name is reduced to letters, digits, space, `-`, `_`, `.` and capped at 40 characters; Codex's default bucket name ("codex") is not repeated. Note that Windows clipboard history or cloud clipboard, if the user has enabled them, may retain the copied text; it contains quota percentages and times only.
+
+**Buttons and tests.** The flyout XAML has five `<Button>` elements (Refresh, Set up, the setup guide's Copy, the per-card Copy that appears in both cards, Copy both); `ArchitectureTests` pins that number so adding a button is a reviewed decision. Tests: `UsageSnapshotTextTests` (exact strings, states, time zones incl. the spring-forward transition, nothing-but-allowed-content), `CopyUsageTests` (capture time, no refresh, clipboard failures), `FlyoutWindowTests` (the three real buttons).
+
+**Limitations.** The report states what QuotaDuck knows; it cannot refresh Claude (only terminal Claude Code sessions report) and does not trigger a Codex read, so a stale value is exported as stale with its age. Copy is per click; there is no hotkey or auto-copy.

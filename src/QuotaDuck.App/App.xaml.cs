@@ -63,6 +63,8 @@ public partial class App : Application
 
         public event Action? CopySetupRequested;
 
+        public event Action<Presentation.ExportScope>? CopyUsageRequested;
+
         public PxPoint? Anchor { get; set; }
 
         public void Show()
@@ -73,6 +75,7 @@ public partial class App : Application
                 _w.VisibleChanged += v => VisibleChanged?.Invoke(v);
                 _w.RefreshRequested += () => RefreshRequested?.Invoke();
                 _w.CopySetupRequested += () => CopySetupRequested?.Invoke();
+                _w.CopyUsageRequested += scope => CopyUsageRequested?.Invoke(scope);
             }
 
             _w.Anchor = Anchor;

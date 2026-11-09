@@ -82,7 +82,16 @@ internal sealed class FakeService : IQuotaService
 
     public event Action<AppSnapshot>? Changed;
 
-    public AppSnapshot Capture() => Current;
+    /// <summary>When set, Capture derives a snapshot at call time (like the real coordinator) instead of returning <see cref="Current"/>.</summary>
+    public Func<AppSnapshot>? OnCapture { get; set; }
+
+    public int CaptureCalls { get; private set; }
+
+    public AppSnapshot Capture()
+    {
+        CaptureCalls++;
+        return OnCapture?.Invoke() ?? Current;
+    }
 
     public void Start()
     {
@@ -132,6 +141,10 @@ internal sealed class FakeFlyout : IFlyout
     public event Action? RefreshRequested;
 
     public event Action? CopySetupRequested;
+
+    public event Action<ExportScope>? CopyUsageRequested;
+
+    public void ClickCopyUsage(ExportScope scope) => CopyUsageRequested?.Invoke(scope);
 
     public PxPoint? Anchor { get; set; }
 

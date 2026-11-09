@@ -121,13 +121,18 @@ public class ArchitectureTests
     }
 
     [Fact]
-    public void Xaml_HasExactlyThreeButtons_CodexRefresh_SetUp_Copy_AndNothingNamedLikeAClaudeRefresh()
+    public void Xaml_HasExactlyFiveButtonElements_CodexRefresh_SetUp_SetupCopy_ProviderCopy_CopyBoth_AndNothingNamedLikeAClaudeRefresh()
     {
         string xaml = File.ReadAllText(Path.Combine(Root(), "src", "QuotaDuck.App", "Views", "CompactFlyoutContent.xaml"));
         string window = File.ReadAllText(Path.Combine(Root(), "src", "QuotaDuck.App", "Views", "FlyoutWindow.xaml"));
         Assert.DoesNotContain("<Button", window);
-        // exactly three buttons: Codex's Refresh, Claude's first-run "Set up"/"Hide" (shown only while setup is pending) and the guide's Copy
-        Assert.Equal(3, System.Text.RegularExpressions.Regex.Matches(xaml, "<Button").Count);
+        // exactly five <Button> elements: Codex's Refresh, Claude's first-run "Set up"/"Hide" (shown only while setup is pending), the setup guide's
+        // Copy, the per-provider "Copy" (one element in the shared card template: it appears in BOTH cards) and "Copy both" under the cards.
+        // So six buttons are visible at most. Adding any other button is a reviewed decision.
+        Assert.Equal(5, System.Text.RegularExpressions.Regex.Matches(xaml, "<Button").Count);
+        Assert.Contains("OnCopyProviderClick", xaml);
+        Assert.Contains("OnCopyBothClick", xaml);
+        Assert.Contains("Copy both Claude and Codex usage as text to the clipboard", xaml);
         Assert.Contains("Refresh Codex quota", xaml);
         Assert.Contains("Copy the setup text to the clipboard", xaml);
         Assert.Contains("SetupButtonName", xaml);

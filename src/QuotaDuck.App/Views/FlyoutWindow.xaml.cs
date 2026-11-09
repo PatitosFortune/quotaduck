@@ -27,6 +27,7 @@ public partial class FlyoutWindow : Window, IFlyout
         DataContext = vm;
         Body.RefreshRequested += () => RefreshRequested?.Invoke();
         Body.CopySetupRequested += () => CopySetupRequested?.Invoke();
+        Body.CopyUsageRequested += scope => CopyUsageRequested?.Invoke(scope);
         IsVisibleChanged += (_, _) =>
         {
             VisibleChanged?.Invoke(base.IsVisible);
@@ -66,6 +67,8 @@ public partial class FlyoutWindow : Window, IFlyout
     public event Action? RefreshRequested;
 
     public event Action? CopySetupRequested;
+
+    public event Action<ExportScope>? CopyUsageRequested;
 
     public new bool IsVisible => base.IsVisible;
 

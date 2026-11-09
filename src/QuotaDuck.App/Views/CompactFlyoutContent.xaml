@@ -35,7 +35,12 @@
             <Border BorderBrush="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}" BorderThickness="{x:Static views:CompactFlyoutContent.CardBorder}"
                     CornerRadius="4" Padding="10,8" Margin="4" MinWidth="296">
                 <StackPanel>
-                    <TextBlock Text="{Binding Name}" FontSize="15" FontWeight="Bold" />
+                    <!-- one compact "copy this provider's usage as text" button per card -->
+                    <DockPanel>
+                        <Button DockPanel.Dock="Right" MinWidth="72" Padding="8,1" Content="{Binding CopyText}" ToolTip="{Binding CopyName}"
+                                Click="OnCopyProviderClick" AutomationProperties.Name="{Binding CopyName}" />
+                        <TextBlock Text="{Binding Name}" FontSize="15" FontWeight="Bold" VerticalAlignment="Center" />
+                    </DockPanel>
                     <views:PixelImage Scene="{Binding Pond}" TargetWidth="296" HorizontalAlignment="Center" Margin="0,4,0,2"
                                       AutomationProperties.Name="{Binding PondDescription}" />
                     <TextBlock Text="{Binding Headline}" TextWrapping="Wrap" FontWeight="SemiBold" FontSize="12.5" Foreground="{Binding Tone, Converter={StaticResource ToneBrush}}" />
@@ -86,6 +91,10 @@
             <ContentControl Content="{Binding Compact.Claude}" ContentTemplate="{StaticResource Card}" IsTabStop="False" />
             <ContentControl Content="{Binding Compact.Codex}" ContentTemplate="{StaticResource Card}" IsTabStop="False" />
         </UniformGrid>
+        <!-- the primary way to share both providers at once: a plain-text report to paste into an assistant -->
+        <Button HorizontalAlignment="Center" MinWidth="200" Margin="4,4,4,2" Padding="12,4" FontWeight="SemiBold" Content="{Binding Compact.CopyBothText}"
+                ToolTip="Copy a plain-text report of Claude and Codex usage, ready to paste into an AI assistant"
+                AutomationProperties.Name="Copy both Claude and Codex usage as text to the clipboard" Click="OnCopyBothClick" />
         <ContentControl Content="{Binding Compact.Guide}" ContentTemplate="{StaticResource Guide}" IsTabStop="False"
                         Visibility="{Binding Compact.Guide, Converter={StaticResource Show}}" />
         <TextBlock Text="{Binding Compact.RefreshFeedback}" TextWrapping="Wrap" Margin="6,2" Visibility="{Binding Compact.RefreshFeedback, Converter={StaticResource Show}}"

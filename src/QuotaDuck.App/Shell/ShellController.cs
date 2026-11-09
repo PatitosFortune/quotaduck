@@ -54,6 +54,7 @@ public sealed class ShellController
         _flyout.VisibleChanged += OnFlyoutVisibleChanged;
         _flyout.RefreshRequested += OnRefreshRequested;
         _flyout.CopySetupRequested += _vm.CopySetup;
+        _flyout.CopyUsageRequested += _vm.CopyUsage;
         _environment.Resumed += _service.NotifyEnvironmentChanged;               // the coordinator's single entry point; no logic duplicated here
         _environment.SessionUnlocked += _service.NotifyEnvironmentChanged;
         _environment.TimeChanged += _service.NotifyEnvironmentChanged;

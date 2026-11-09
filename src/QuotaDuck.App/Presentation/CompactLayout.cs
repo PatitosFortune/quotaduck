@@ -33,7 +33,9 @@ public sealed record CompactCardModel(
     string PondDescription,
     SetupGuideModel? Setup,
     string SetupButtonText = "Set up",
-    string SetupButtonName = "Set up Claude Code: show the instructions")
+    string SetupButtonName = "Set up Claude Code: show the instructions",
+    string CopyText = "Copy",
+    string CopyName = "Copy usage as text to the clipboard")
 {
     public bool HasRows => Rows.Count > 0 && Setup is null;
 }
@@ -59,7 +61,9 @@ public static class CompactCard
         string freshness = c.Windows.Select(w => w.AgeText).FirstOrDefault(a => a.Length > 0) ?? string.Empty;
         return new CompactCardModel(c.Name, c.Headline, freshness, c.Note, c.Footer, c.Tone, rows, c.Refresh, c.Pond, c.PondDescription, c.Setup,
             setupExpanded ? "Hide" : "Set up",
-            setupExpanded ? "Hide the Claude Code setup instructions" : "Set up Claude Code: show the instructions");
+            setupExpanded ? "Hide the Claude Code setup instructions" : "Set up Claude Code: show the instructions",
+            "Copy",
+            $"Copy {c.Name} usage as text to the clipboard");
     }
 }
 
@@ -67,7 +71,7 @@ public static class CompactCard
 /// Side-by-side only when it can be done without squeezing: enough work-area width for two full cards, no expanded help, and no
 /// accessibility request for larger text. Anything else stacks the same cards. Pure.
 /// </summary>
-public sealed record CompactPresentation(CompactCardModel Claude, CompactCardModel Codex, SetupGuideModel? Guide, string? RefreshFeedback);
+public sealed record CompactPresentation(CompactCardModel Claude, CompactCardModel Codex, SetupGuideModel? Guide, string? RefreshFeedback, string CopyBothText = "Copy both");
 
 public static class CompactLayoutPolicy
 {

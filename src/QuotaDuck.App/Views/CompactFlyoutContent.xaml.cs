@@ -26,6 +26,8 @@ public partial class CompactFlyoutContent : UserControl
 
     public event Action? CopySetupRequested;
 
+    public event Action<ExportScope>? CopyUsageRequested;
+
     /// <summary>The arrangement. The width is fixed per mode: text wraps at the card width instead of widening the flyout.</summary>
     public CompactMode Mode
     {
@@ -41,6 +43,16 @@ public partial class CompactFlyoutContent : UserControl
     private void OnSetUpClick(object sender, RoutedEventArgs e) => (DataContext as ShellViewModel)?.ToggleSetup();
 
     private void OnCopyClick(object sender, RoutedEventArgs e) => CopySetupRequested?.Invoke();
+
+    private void OnCopyProviderClick(object sender, RoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.DataContext is CompactCardModel card)
+        {
+            CopyUsageRequested?.Invoke(card.Name == "Claude" ? ExportScope.Claude : ExportScope.Codex);
+        }
+    }
+
+    private void OnCopyBothClick(object sender, RoutedEventArgs e) => CopyUsageRequested?.Invoke(ExportScope.Both);
 
     private void OnRefreshClick(object sender, RoutedEventArgs e) => RefreshRequested?.Invoke();
 }
