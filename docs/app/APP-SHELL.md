@@ -131,3 +131,13 @@ Note: Claude reports only from terminal Claude Code sessions; usage elsewhere (V
 **Buttons and tests.** The flyout XAML has five `<Button>` elements (Refresh, Set up, the setup guide's Copy, the per-card Copy that appears in both cards, Copy both); `ArchitectureTests` pins that number so adding a button is a reviewed decision. Tests: `UsageSnapshotTextTests` (exact strings, states, time zones incl. the spring-forward transition, nothing-but-allowed-content), `CopyUsageTests` (capture time, no refresh, clipboard failures), `FlyoutWindowTests` (the three real buttons).
 
 **Limitations.** The report states what QuotaDuck knows; it cannot refresh Claude (only terminal Claude Code sessions report) and does not trigger a Codex read, so a stale value is exported as stale with its age. Copy is per click; there is no hotkey or auto-copy.
+
+## Outstanding verification items (recorded 2026-11-09, after the copy-usage PR)
+
+These are open checks, **not confirmed bugs**. Nothing here has been observed to fail for a user.
+
+1. **Unexplained flyout content-height variation (16 DIP).** Two screenshot-harness runs (`LayoutScreenshotTests`, simulated DPI) rendered the same state with a flyout content height that differed by 16 DIP (first run about 315 DIP, second about 331 DIP, side by side). The pond art looked larger in the taller run. The window height itself did not change between the runs.
+2. **Cause unknown; no clipping observed.** The cause has not been investigated. In every render that was reviewed (100%, 125%, 150%, 200%, and the stacked fallback) nothing was clipped or crowded, and the flyout's existing scroll behaviour covers a short work area.
+3. **Real-display DPI validation is still to do at 100%, 150% and 200%.** The renders above simulate DPI in the test harness; the app has not been run on a display set to those Windows scales for the copy-usage buttons.
+4. **Manual clipboard paste check is still to do.** The report was verified through the real clipboard code (round trip, CRLF line endings) but has not been pasted into Notepad or another ordinary text application.
+5. **When to resolve.** Investigate the height variation (item 1) during the Phase 2 visual review or release validation, and complete items 3 and 4 as part of release validation. Update or remove this section once they are done.
