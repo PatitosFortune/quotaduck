@@ -35,6 +35,16 @@ public sealed class ShellViewModel : INotifyPropertyChanged
     private Coordinator.ClaudeSetupState? _setupState;
     private DateTimeOffset _copiedUntil;
     private DateTimeOffset _copyFailedUntil;
+    private ExportScope _usageCopyScope;
+    private bool _usageCopyOk;
+    private DateTimeOffset _usageCopyUntil;
+    private CopyUi _copyUi = CopyUi.Idle;
+
+    /// <summary>Button labels and the polite notice for the "copy usage as text" buttons; derived from the brief copied/failed flash only.</summary>
+    private sealed record CopyUi(string Claude, string Codex, string Both, string? Notice)
+    {
+        public static readonly CopyUi Idle = new("Copy", "Copy", "Copy both", null);
+    }
 
     public ShellViewModel(
         IQuotaService service,
@@ -102,9 +112,11 @@ public sealed class ShellViewModel : INotifyPropertyChanged
             Claude = raw.Claude with { Pond = _claudeAnimator.Current(raw.Claude.Pond) with { Frame = _frame } },
             Codex = raw.Codex with { Pond = _codexAnimator.Current(raw.Codex.Pond) with { Frame = _frame } },
         };
-        if (!Same(next, _current))
+        CopyUi ui = CurrentCopyUi(now);
+        if (!Same(next, _current) || ui != _copyUi)
         {
             _current = next;
+            _copyUi = ui;
             if (next.Claude.Setup is null)
             {
                 _setupExpanded = false;                                     // Claude has reported (or never needed the guide): nothing to keep open
@@ -184,10 +196,58 @@ public sealed class ShellViewModel : INotifyPropertyChanged
     }
 
     private CompactPresentation BuildCompact() => new(
-        CompactCard.From(_current.Claude, _setupExpanded),
-        CompactCard.From(_current.Codex),
+        CompactCard.From(_current.Claude, _setupExpanded) with { CopyText = _copyUi.Claude },
+        CompactCard.From(_current.Codex) with { CopyText = _copyUi.Codex },
         _setupExpanded ? _current.Claude.Setup : null,
-        _current.RefreshFeedback);
+        _current.RefreshFeedback ?? _copyUi.Notice,
+        _copyUi.Both);
+
+    private CopyUi CurrentCopyUi(DateTimeOffset now)
+    {
+        if (now >= _usageCopyUntil)
+        {
+            return CopyUi.Idle;
+        }
+
+        string done = _usageCopyOk ? "Copied" : "Not copied";
+        string? notice = _usageCopyOk
+            ? "Copied " + (_usageCopyScope switch { ExportScope.Codex => "Codex", ExportScope.Claude => "Claude", _ => "Claude and Codex" }) + " usage to the clipboard."
+            : "Could not copy: the clipboard is busy. Try again.";
+        return new CopyUi(
+            _usageCopyScope == ExportScope.Claude ? done : "Copy",
+            _usageCopyScope == ExportScope.Codex ? done : "Copy",
+            _usageCopyScope == ExportScope.Both ? done : "Copy both",
+            notice);
+    }
+
+    /// <summary>
+    /// The "Copy" buttons: a plain-text usage report goes to the clipboard. The snapshot is captured HERE, at the click (the coordinator derives
+    /// it at that instant without reading any provider), so "Captured" is the real copy time. Never starts a Codex read, never touches its
+    /// cooldown; a locked or failing clipboard is reported briefly and never thrown.
+    /// </summary>
+    public void CopyUsage(ExportScope scope)
+    {
+        if (_clipboard is null)
+        {
+            return;
+        }
+
+        bool ok;
+        try
+        {
+            // the report is built with LF; the clipboard gets Windows CRLF so every paste target shows separate lines
+            ok = _clipboard.TrySetText(UsageSnapshotText.Build(_service.Capture(), scope, _zone).Replace("\n", "\r\n", StringComparison.Ordinal));
+        }
+        catch (Exception)
+        {
+            ok = false;
+        }
+
+        _usageCopyScope = scope;
+        _usageCopyOk = ok;
+        _usageCopyUntil = _clock.GetUtcNow() + (ok ? TimeSpan.FromSeconds(3) : TimeSpan.FromSeconds(6));
+        Refresh();
+    }
 
     /// <summary>The Copy button of the setup guide: the snippet goes to the clipboard (the user pastes it into their own settings).</summary>
     public void CopySetup()

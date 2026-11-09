@@ -42,6 +42,10 @@ Claude usage reaches QuotaDuck **only while Claude Code runs in a terminal** (a 
 
 To update, quit QuotaDuck (tray icon → right-click → **Exit**) and replace the folder's files. The path stays the same, so your Claude settings keep working.
 
+## Copy your usage as text
+
+**Not in the `1.0.0-rc.1` download.** The released rc.1 ZIP does not have it; it exists only in the source (`main`) until a later release is built (building from source gives it now). Each provider card has a **Copy** button and there is a **Copy both** button under the cards. They put a plain-text report on the clipboard (remaining and used percentages, reset times, when it was copied, and when each provider's data last changed) that you can paste into an AI assistant or a note. QuotaDuck writes to the clipboard **only when you press one of these buttons**, and what you then paste where is up to you. Copying never refreshes anything and never contacts a provider; stale, expired or missing values are labelled as such, never shown as 0%. Details: `docs/app/APP-SHELL.md`.
+
 ## Set up Claude (one time)
 
 Open the flyout. While Claude has never reported, the Claude card shows **Waiting for terminal setup** and a **Set up** button. It opens instructions and a snippet with the real path of `quotaduck-statusline.exe` filled in, with a **Copy** button.

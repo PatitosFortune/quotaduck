@@ -13,6 +13,9 @@ public interface IFlyout
 
     event Action? RefreshRequested;
 
+    /// <summary>One of the three "copy usage as text" buttons was pressed (Codex card, Claude card, or both).</summary>
+    event Action<Presentation.ExportScope>? CopyUsageRequested;
+
     /// <summary>The Copy button of the first-run Claude setup guide was pressed.</summary>
     event Action? CopySetupRequested;
 

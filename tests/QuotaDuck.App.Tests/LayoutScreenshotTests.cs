@@ -117,6 +117,9 @@ public class LayoutScreenshotTests
         AppSnapshot fresh = BothFresh();
         Render("1-both-fresh@125", Vm(fresh), CompactMode.SideBySide, false, 1.25);
         Render("1-both-fresh@150", Vm(fresh), CompactMode.SideBySide, false, 1.5);
+        Render("1-both-fresh@200", Vm(fresh), CompactMode.SideBySide, false, 2.0);
+        Render("4-claude-elapsed-codex-cooldown@200", Vm(Scenarios()[2].S), CompactMode.SideBySide, false, 2.0);
+        Render("1-both-fresh@200-stacked-fallback", Vm(fresh), CompactMode.Stacked, false, 2.0);
         Render("1-both-fresh@100-stacked-fallback", Vm(fresh), CompactMode.Stacked, false, 1.0);
         Render("1-both-fresh@150-stacked-fallback", Vm(fresh), CompactMode.Stacked, false, 1.5);
         Render("4-claude-elapsed-codex-cooldown@150", Vm(Scenarios()[2].S), CompactMode.SideBySide, false, 1.5);

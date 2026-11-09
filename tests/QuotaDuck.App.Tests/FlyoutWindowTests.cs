@@ -5,6 +5,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
+using QuotaDuck.App.Presentation;
 using QuotaDuck.App.Shell;
 using QuotaDuck.Art;
 using QuotaDuck.App.Views;
@@ -80,7 +81,12 @@ public class FlyoutWindowTests
     private static string[] Texts(DependencyObject root) => Sta.Descendants<TextBlock>(root).Select(t => t.Text).ToArray();
 
     /// <summary>The template instantiates a collapsed button for Claude too; only VISIBLE buttons exist for the user.</summary>
-    private static Button[] VisibleButtons(FlyoutWindow w) => Sta.Descendants<Button>(w).Where(b => b.IsVisible).ToArray();
+    private static Button[] AllVisibleButtons(FlyoutWindow w) => Sta.Descendants<Button>(w).Where(b => b.IsVisible).ToArray();
+
+    private static bool IsUsageCopy(Button b) => AutomationProperties.GetName(b).EndsWith(" usage as text to the clipboard", StringComparison.Ordinal);
+
+    /// <summary>The Refresh / Set up / guide-Copy buttons: the three always-present "copy usage as text" buttons are tested on their own.</summary>
+    private static Button[] VisibleButtons(FlyoutWindow w) => AllVisibleButtons(w).Where(b => !IsUsageCopy(b)).ToArray();
 
     private static Button RefreshButton(FlyoutWindow w) => Assert.Single(VisibleButtons(w));
 
@@ -363,6 +369,33 @@ public class FlyoutWindowTests
             Assert.False(vm.SetupExpanded);
             Assert.False(ShowsText(w, "Connect Claude Code (one-time setup)"));
             Assert.Equal(collapsedHeight, w.ActualHeight, 1);
+        });
+    }
+
+    [Fact]
+    public void ThreeUsageCopyButtons_AreVisible_Named_AndEachRaisesItsOwnScope()
+    {
+        Sta.Run(() =>
+        {
+            (FlyoutWindow w, ShellViewModel vm, _, _) = Make();
+            var scopes = new List<ExportScope>();
+            w.CopyUsageRequested += scopes.Add;
+            vm.SetFlyoutVisible(true);
+            ((IFlyout)w).Show();
+            Sta.Flush();
+            Button[] copies = AllVisibleButtons(w).Where(IsUsageCopy).ToArray();
+            Assert.Equal(
+                ["Copy Claude usage as text to the clipboard", "Copy Codex usage as text to the clipboard", "Copy both Claude and Codex usage as text to the clipboard"],
+                copies.Select(b => AutomationProperties.GetName(b)).Order(StringComparer.Ordinal).ToArray());
+            Assert.All(copies, b => Assert.True(b.IsEnabled && b.Focusable && b.IsTabStop));
+            foreach (Button b in copies)
+            {
+                Click(b);
+            }
+
+            Assert.Equal([ExportScope.Codex, ExportScope.Claude, ExportScope.Both], scopes.Order().ToArray());
+            Assert.Equal(2, copies.Count(b => (string)b.Content == "Copy"));
+            Assert.Equal("Copy both", copies.Single(b => AutomationProperties.GetName(b).StartsWith("Copy both", StringComparison.Ordinal)).Content);
         });
     }
 
