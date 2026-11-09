@@ -93,7 +93,7 @@ Three buttons put a plain-text usage report on the clipboard, for pasting into a
 
 **What the click does (and does not).** `CopyUsage` calls `IQuotaService.Capture()` at the click, which derives a snapshot at that instant without reading any provider, so `Captured:` is the real copy time and every age is measured at it (not at the last published snapshot). It never starts a Codex read, never touches the Codex cooldown, and never reads any file or setting. A failing clipboard or capture is reported briefly and never thrown.
 
-**Format** (illustrative numbers; ASCII, LF line endings, culture-invariant):
+**Format** (illustrative numbers; ASCII, culture-invariant; built with LF and put on the clipboard with Windows CRLF line endings):
 
 ```text
 QuotaDuck usage snapshot
@@ -115,14 +115,14 @@ Status line last ran: 2030-01-01 09:59 +00:00 (about 1 min ago)
 Note: Claude reports only from terminal Claude Code sessions; usage elsewhere (VS Code panel, Claude Desktop, claude.ai) may not be reflected.
 ```
 
-**Rules.** Remaining is the headline number with used in brackets. Times are local with their UTC offset for that instant (daylight-saving-correct) and always carry the date. *Captured* (when copied) is separate from each provider's own time: Codex's *Last successful read* (a failed attempt never moves it) and Claude's *Numbers last changed* and *Status line last ran*. The last two differ on purpose: Claude Code can keep running the status line while the percentages stay the same. While the status line ran within 10 minutes the status reads "Claude Code is still reporting; the numbers have not changed for a while" rather than "no recent report"; the window values themselves keep their Core state and age. "Status line last ran" is approximate (the bridge records it at most about once a minute).
+**Rules.** Remaining is the headline number with used in brackets. Times are local with their UTC offset for that instant (daylight-saving-correct) and always carry the date. *Captured* (when copied) is separate from each provider's own time: Codex's *Last successful read* (a failed attempt never moves it) and Claude's *Numbers last changed* and *Status line last ran*. The last two differ on purpose: Claude Code can keep running the status line while the percentages stay the same. Per Claude window that is not Fresh: if the status line ran within 10 minutes the line says `unchanged since <time> (<age> ago); status line ran <age> ago` (the hook is running and reported the same value, so it is not called "old"); otherwise it says `older reading` / `OLD reading` with `last changed <age> ago`. When every window is old and the status line is also not recent, the status is "No recent report from Claude Code"; when it is recent, "Claude Code is still reporting; the numbers have not changed for a while". An expired window is always `no value`, whatever the status line is doing. Core's freshness states and ages are unchanged. "Status line last ran" is approximate (the bridge records it at most about once a minute).
 
 | Window state | Text |
 |---|---|
 | Fresh | numbers, reset time |
-| Quiet / Sleeping | numbers marked `older reading` / `OLD reading` with their age |
+| Quiet / Sleeping | numbers marked `older reading` / `OLD reading` with their age; for Claude with a recent status line: `unchanged since ...` instead |
 | Elapsed (reset passed) | `no value (the reset time, ..., has passed; the new value has not been reported yet)`; no number |
-| No data / never reported | `no data`, or only the status line; never 0% |
+| No data / never reported | every window whose identity is known is listed as `no data` (Claude: `5-hour session` and `Weekly`); never 0%. Codex's windows are only known from a read, so before one it prints `Windows: none known yet (...)` instead of inventing any |
 | Provider turned off | `Status: Turned off`; nothing else |
 | Provider error | the bounded `IssueText` sentence; last good values (if any) stay marked with their age |
 

@@ -79,19 +79,26 @@ public static class UsageSnapshotText
             sb.Append("Detail: ").Append(Ascii(note)).Append('\n');
         }
 
-        bool anyData = p.View.Windows.Any(w => w.State != WindowState.NoData);
-        if (p.Issue == ProviderIssue.NotConfigured || !anyData)
+        if (p.Issue == ProviderIssue.NotConfigured)
         {
-            return;                                                                  // nothing truthful to list (never a 0% placeholder)
+            return;
         }
 
+        if (p.View.Windows.Count == 0)
+        {
+            // Codex's windows are only known from a successful read; none is invented before that.
+            sb.Append("Windows: none known yet (Codex's windows are known only after a successful read)\n");
+            return;
+        }
+
+        // Every window whose identity is known is listed, with "no data" where there is no usable value (never a 0% placeholder).
         foreach (WindowView w in p.View.Windows)
         {
-            sb.Append(Line(w, s.At, zone, ageWord)).Append('\n');
+            sb.Append(Line(w, s.At, zone, ageWord, claude: title == "CLAUDE")).Append('\n');
         }
     }
 
-    private static string Line(WindowView w, DateTimeOffset now, TimeZoneInfo zone, string ageWord)
+    private static string Line(WindowView w, DateTimeOffset now, TimeZoneInfo zone, string ageWord, bool claude)
     {
         string name = Name(w);
         switch (w.State)
@@ -109,7 +116,15 @@ public static class UsageSnapshotText
         var sb = new StringBuilder(name).Append(": ").Append(TimeText.Percent(left)).Append(" remaining (").Append(TimeText.Percent(used)).Append(" used)");
         if (w.State != WindowState.Fresh && w.EvidenceAge is { } age)
         {
-            sb.Append(w.State == WindowState.Sleeping ? ", OLD reading: " : ", older reading: ").Append(ageWord).Append(' ').Append(TimeText.Humanize(age)).Append(" ago");
+            if (claude && w.ReceivedAge is { } ran && ran < StatusLineRecent)
+            {
+                // The status line ran recently and reported this same value: unchanged, not old.
+                sb.Append(", unchanged since ").Append(Format(now - age, zone)).Append(" (").Append(TimeText.Humanize(age)).Append(" ago); status line ran ").Append(TimeText.Humanize(ran)).Append(" ago");
+            }
+            else
+            {
+                sb.Append(w.State == WindowState.Sleeping ? ", OLD reading: " : ", older reading: ").Append(ageWord).Append(' ').Append(TimeText.Humanize(age)).Append(" ago");
+            }
         }
 
         if (w.LimitReached)

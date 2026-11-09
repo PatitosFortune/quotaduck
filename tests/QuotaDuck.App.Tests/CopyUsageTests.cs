@@ -55,6 +55,21 @@ public class CopyUsageTests
     }
 
     [Fact]
+    public void TheClipboardText_UsesWindowsCrLf_WithNoBareLineFeeds()
+    {
+        const char cr = (char)13, lf = (char)10;
+        ShellRig r = Rig();
+        r.Flyout.ClickCopyUsage(ExportScope.Both);
+        string text = Assert.Single(r.Clipboard.Texts);
+        Assert.Contains(new string([cr, lf]), text);
+        Assert.Equal(text.Count(c => c == lf), text.Count(c => c == cr));
+        for (int i = 0; i < text.Length; i++)
+        {
+            Assert.True(text[i] != lf || (i > 0 && text[i - 1] == cr), "bare line feed at " + i);       // every LF is preceded by CR
+        }
+    }
+
+    [Fact]
     public void CopyingNeverStartsAProviderRead_OrAnyOtherServiceCall()
     {
         ShellRig r = Rig();

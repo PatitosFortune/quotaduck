@@ -92,7 +92,32 @@ public class UsageSnapshotTextTests
         Assert.DoesNotContain("No recent report", t);
         Assert.Contains("Numbers last changed: 2030-01-01 05:00 +00:00 (5 h ago)", t);
         Assert.Contains("Status line last ran: 2030-01-01 09:58 +00:00 (about 2 min ago)", t);
-        Assert.Contains("OLD reading: last changed 5 h ago", t);                              // the value itself is still labelled old, with its true age
+        // the per-window text agrees with the status: unchanged (the status line reported it again), not "OLD"
+        Assert.Contains("5-hour session: 58% remaining (42% used), unchanged since 2030-01-01 05:00 +00:00 (5 h ago); status line ran 2 min ago; resets", t);
+        Assert.Contains("Weekly: 88% remaining (12% used), unchanged since", t);
+        Assert.DoesNotContain("OLD", t);
+    }
+
+    [Fact]
+    public void Claude_QuietValue_WithARecentStatusLine_IsUnchanged_AndWithoutOne_IsOlder()
+    {
+        string ran = Text(Snap.Make(T, Claude(T.AddMinutes(-40), T.AddMinutes(-1))), ExportScope.Claude);
+        Assert.Contains("Status: Reported by Claude Code", ran);
+        Assert.Contains("5-hour session: 58% remaining (42% used), unchanged since 2030-01-01 09:20 +00:00 (40 min ago); status line ran 1 min ago", ran);
+
+        string silent = Text(Snap.Make(T, Claude(T.AddMinutes(-40), T.AddMinutes(-40))), ExportScope.Claude);
+        Assert.Contains("5-hour session: 58% remaining (42% used), older reading: last changed 40 min ago", silent);
+        Assert.DoesNotContain("unchanged since", silent);
+    }
+
+    [Fact]
+    public void Claude_ExpiredWindow_IsNoValue_EvenWhileTheStatusLineKeepsRunning()
+    {
+        ClaudeState st = new(Rec(97, T.AddMinutes(-20), T.AddHours(-1), T.AddMinutes(-1)), Rec(12, T.AddDays(4), T.AddHours(-1), T.AddMinutes(-1)));
+        string t = Text(Snap.Make(T, st), ExportScope.Claude);
+        Assert.Contains("5-hour session: no value (the reset time, 2030-01-01 09:40 +00:00, has passed; the new value has not been reported yet)", t);
+        Assert.DoesNotContain("97%", t);
+        Assert.Contains("Weekly: 88% remaining (12% used), unchanged since", t);
     }
 
     [Fact]
@@ -134,6 +159,7 @@ public class UsageSnapshotTextTests
     {
         string t = Text(Snap.Make(T), ExportScope.Claude);
         Assert.Contains("Status: Waiting for Claude Code in a terminal", t);
+        Assert.Contains("5-hour session: no data\nWeekly: no data\n", t);                      // the two windows Claude really has are listed, as "no data"
         Assert.Contains("Numbers last changed: never reported", t);
         Assert.DoesNotContain("Status line last ran", t);
         Assert.DoesNotContain("remaining", t.Replace("usage REMAINING", string.Empty, StringComparison.Ordinal));
@@ -156,6 +182,7 @@ public class UsageSnapshotTextTests
     {
         string t = Text(Snap.Make(T), ExportScope.Codex);
         Assert.Contains("Status: Not read yet", t);
+        Assert.Contains("Windows: none known yet (Codex's windows are known only after a successful read)", t);     // nothing invented before a read
         Assert.Contains("Last successful read: none yet", t);
         Assert.DoesNotContain("remaining (", t);
     }
@@ -165,6 +192,7 @@ public class UsageSnapshotTextTests
     {
         string t = Text(Snap.Make(T, codexIssue: ProviderIssue.CodexNotInstalled, attempt: new ProviderAttempt(T, ProviderErrorKind.NotFound)), ExportScope.Codex);
         Assert.Contains("Status: Codex is not installed", t);
+        Assert.Contains("Windows: none known yet", t);
         Assert.Contains("Last successful read: none yet", t);
     }
 
@@ -299,7 +327,7 @@ public class UsageSnapshotTextTests
         var known = new[]
         {
             "QuotaDuck usage snapshot", "Captured: ", "Percentages are usage REMAINING", "CODEX", "CLAUDE", "Status: ", "Detail: ", "Last successful read: ",
-            "Numbers last changed: ", "Status line last ran: ", "Note: ", "5-hour session: ", "Weekly: ",
+            "Numbers last changed: ", "Status line last ran: ", "Note: ", "5-hour session: ", "Weekly: ", "Windows: ",
         };
         foreach (AppSnapshot s in new[] { Fresh(), Snap.Make(T), Snap.Make(T, Claude(T.AddHours(-5), T.AddMinutes(-2)), Snap.Codex(T.AddMinutes(-30))) })
         {

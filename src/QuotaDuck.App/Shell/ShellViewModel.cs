@@ -235,7 +235,8 @@ public sealed class ShellViewModel : INotifyPropertyChanged
         bool ok;
         try
         {
-            ok = _clipboard.TrySetText(UsageSnapshotText.Build(_service.Capture(), scope, _zone));
+            // the report is built with LF; the clipboard gets Windows CRLF so every paste target shows separate lines
+            ok = _clipboard.TrySetText(UsageSnapshotText.Build(_service.Capture(), scope, _zone).Replace("\n", "\r\n", StringComparison.Ordinal));
         }
         catch (Exception)
         {
