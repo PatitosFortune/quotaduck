@@ -15,7 +15,7 @@ age, state word); the picture never replaces them and is never needed to underst
 | Pond scene: speckled sand bank, elliptical bowl (16 water rows max), wall stones x3, wall reeds x2, bank reeds x6, ripples | 144 x 32 | `PondScene` / `PondGeometry` |
 | Duck sprites (procedural, 20 px wide): floating 12 rows, standing 16 rows (legs), sleeping (closed eye), hollow "unknown" outline, alert standing | 20 x 12 / 20 x 16 | `DuckSprites` |
 | Glyphs: `z` (5x5), `?` (5x7), `!` (2x6, alert red); busy dots are single pixels | — | `Glyphs` |
-| Gauge: a small pixel trough replacing the generic progress bar (water = remaining) | 120 x 6 | `GaugeScene` |
+| Gauge: a small pixel trough replacing the generic progress bar (water = remaining) | 144 x 6 (the pond's width, so both share one integer scale and one edge) | `GaugeScene` |
 | Tray icon: duck head over a waterline, 16/32/48 px, 32-bit DIB `.ico` | 16 x 16 | `TrayIcon` -> `src/QuotaDuck.App/Assets/quotaduck.ico` |
 | PNG/ICO encoders (deterministic) | — | `PngEncoder`, `TrayIcon.BuildIco` |
 

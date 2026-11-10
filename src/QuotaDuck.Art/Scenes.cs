@@ -321,7 +321,7 @@ public enum GaugeCondition
 /// <summary>A small pixel trough replacing the generic progress bar: water = remaining quota. The numbers are always printed next to it.</summary>
 public sealed record GaugeScene(double? Remaining, GaugeCondition Condition) : ArtScene
 {
-    public const int GaugeWidth = 120;
+    public const int GaugeWidth = 144;
     public const int GaugeHeight = 6;
 
     public override int Width => GaugeWidth;

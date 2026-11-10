@@ -206,7 +206,9 @@ public class WindowPlacementTests
             Assert.NotEmpty(mover.Moves);
             Assert.All(mover.Moves, m => Assert.NotEqual(0, m.Hwnd));
             (nint _, PxPoint first) = mover.Moves[0];
-            Assert.True(first.X + 664 <= 1920 && first.X >= 1920 - 664 - 1, $"the wide flyout is clamped to the right edge of the work area, x={first.X}");   // centred on 1700 would run off the screen
+            // the flyout's width follows the art scale of the DPI the test process runs at (288 DIP cards at 100/150/200%, 230 DIP at 125%), so derive it
+            double expectedWidth = Math.Ceiling(QuotaDuck.App.Presentation.CompactLayoutPolicy.ContentWidthDip(QuotaDuck.App.Presentation.CompactMode.SideBySide, System.Windows.Media.VisualTreeHelper.GetDpi(w).DpiScaleX)) + 16;
+            Assert.True(first.X + expectedWidth <= 1920 && first.X >= 1920 - expectedWidth - 1, $"the wide flyout is clamped to the right edge of the work area, x={first.X}");   // centred on 1700 would run off the screen
             Assert.True(mover.Moves.Count >= 2, "second pass after layout");
             PxPoint last = mover.Moves[^1].At;
             Assert.Equal(1920 - (int)Math.Round(w.ActualWidth), last.X);

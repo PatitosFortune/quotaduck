@@ -27,6 +27,7 @@ public static class Presenter
 
         string headline;
         string? note = null;
+        bool noteInFooter = false;
         Tone tone;
         switch (p.Issue)
         {
@@ -54,6 +55,7 @@ public static class Presenter
                 if (p.View.Reason == ProviderReason.ClaudeNoRecentReport)
                 {
                     note = "Usage elsewhere (VS Code panel, Claude Desktop, claude.ai) may not appear until a terminal Claude Code session reports.";
+                    noteInFooter = true;                                    // shown once in the shared footer, not as a paragraph inside the card
                 }
 
                 break;
@@ -70,7 +72,8 @@ public static class Presenter
             Pond: PondMapping.For(p, faceRight: true),
             PondDescription: PondMapping.Describe("Claude", p),
             // first-run guidance only while Claude has NEVER reported (no state file yet); never once data exists
-            Setup: setup is not null && p.Issue == ProviderIssue.WaitingForTerminalClaudeCode ? SetupGuidePresenter.Build(setup) : null);
+            Setup: setup is not null && p.Issue == ProviderIssue.WaitingForTerminalClaudeCode ? SetupGuidePresenter.Build(setup) : null,
+            NoteBelongsInFooter: noteInFooter);
     }
 
     // ---------------- Codex (pull: manual refresh) ----------------

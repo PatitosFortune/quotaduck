@@ -40,7 +40,8 @@ public sealed record ProviderCardModel(
     string? Footer,
     PondScene Pond,
     string PondDescription,
-    SetupGuideModel? Setup = null)
+    SetupGuideModel? Setup = null,
+    bool NoteBelongsInFooter = false)
 {
     /// <summary>The per-window rows are replaced by the setup guide while Claude has never reported (they would only say "No data").</summary>
     public bool ShowWindows => Setup is null;

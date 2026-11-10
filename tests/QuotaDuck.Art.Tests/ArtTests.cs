@@ -362,7 +362,7 @@ public class GaugeTests
         Assert.InRange(solid / (double)(solid + pale), 0.35, 0.65);                         // diagonal stripes, not a solid fill
         Assert.Equal(0, Px.Count(new GaugeScene(null, GaugeCondition.Empty).Render(), Ink.Water));
         Assert.Same(Palette.Subdued, new GaugeScene(0.5, GaugeCondition.Subdued).Palette);
-        Assert.Equal((120, 6), (new GaugeScene(0.5, GaugeCondition.Normal).Width, new GaugeScene(0.5, GaugeCondition.Normal).Height));
+        Assert.Equal((144, 6), (new GaugeScene(0.5, GaugeCondition.Normal).Width, new GaugeScene(0.5, GaugeCondition.Normal).Height));
     }
 }
 

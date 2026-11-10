@@ -200,7 +200,8 @@ public sealed class ShellViewModel : INotifyPropertyChanged
         CompactCard.From(_current.Codex) with { CopyText = _copyUi.Codex },
         _setupExpanded ? _current.Claude.Setup : null,
         _current.RefreshFeedback ?? _copyUi.Notice,
-        _copyUi.Both);
+        _copyUi.Both,
+        _current.Claude.NoteBelongsInFooter ? _current.Claude.Note : _current.Claude.Footer);
 
     private CopyUi CurrentCopyUi(DateTimeOffset now)
     {
