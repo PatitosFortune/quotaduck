@@ -32,7 +32,7 @@ QuotaDuck's own code and packaging, for example:
 - Missing code signing on the release candidate. That is documented in the README and release notes.
 - Automated-scanner output without a demonstrated impact on QuotaDuck.
 
-A known build-toolchain advisory (a Brotli decoder issue in the .NET Native AOT toolchain used to build the helper) is assessed in [`docs/security/NU1903-ILCOMPILER-BROTLI.md`](docs/security/NU1903-ILCOMPILER-BROTLI.md). No reachable Brotli use has been identified in QuotaDuck, but exploitability has not been conclusively ruled out. You do not need to report that advisory itself again; a concrete way to reach the affected code from QuotaDuck would be a valid report.
+A known build-toolchain advisory (a Brotli decoder issue, CVE-2026-111497 / GHSA-p3jp-9v83-76w9) affected the .NET Native AOT toolchain version (10.0.12) that built the published `1.0.0-rc.1` helper. That release is unchanged. No reachable Brotli use has been identified in QuotaDuck, but exploitability has not been conclusively ruled out. The repository now pins the patched toolchain (SDK 10.0.403, compiler 10.0.14); a release containing the rebuilt helper is pending release verification and owner approval. The assessment and the verification record are in [`docs/security/NU1903-ILCOMPILER-BROTLI.md`](docs/security/NU1903-ILCOMPILER-BROTLI.md). You do not need to report that advisory itself again; a concrete way to reach the affected code from QuotaDuck would be a valid report.
 
 ## What to expect
 
