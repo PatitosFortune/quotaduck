@@ -2,7 +2,7 @@
 
 Recorded 2026-11-09 while finishing the Copy-usage PR. **Assessment only: no dependency, SDK or build change was made.**
 
-> **Status (2026-11-10): the source now builds the helper with the patched 10.0.14 toolchain; the published `1.0.0-rc.1` helper is unchanged (built with 10.0.12).** `global.json` pins SDK 10.0.403 and the build resolves the Native AOT compiler and runtime pack at 10.0.14. Build, tests and the denylist passed; the Native AOT verification script did **not** fully pass (one timing gate FAILED and carries an owner-accepted exception; see "Verification record"). Nothing has been released, so the fix is not yet in any shipped build; a release containing the rebuilt helper is pending release verification and owner approval.
+> **Status (2026-11-10): `1.0.0-rc.2` is built with the patched 10.0.14 toolchain; the published `1.0.0-rc.1` helper is unchanged (built with 10.0.12).** `global.json` pins SDK 10.0.403 and the build resolves the Native AOT compiler and runtime pack at 10.0.14. Build, tests, denylist and, in the rc.2 preparation run, the Native AOT verification pass. The first Native AOT verification run (2026-11-10, before rc.2) failed one timing gate and carries an owner-accepted one-time exception; see "Verification record" and "rc.2 preparation record".
 
 ## What the build reports
 
@@ -48,9 +48,9 @@ Availability of 10.0.14 is confirmed: nuget.org lists it for `Microsoft.DotNet.I
 
 - **Package presence:** the published `1.0.0-rc.1` helper was built with the affected 10.0.12 compiler and Native AOT runtime pack. That is demonstrated.
 - **Exploitability:** not demonstrated. The evidence above (no Brotli or compression use in the helper's source, no decompression step in its input path, no Brotli strings or compression imports in the shipped binary) shows no reachable path, but string absence in a stripped binary is not proof, so exploitability is not conclusively ruled out.
-- The rc.1 release assets are not altered. The fix is a rebuilt helper in a release that is pending release verification and owner approval.
+- The rc.1 release assets are not altered. The fix is the rebuilt helper in `1.0.0-rc.2`.
 
-## Remediation (done in source; not yet released)
+## Remediation (in source and in `1.0.0-rc.2`)
 
 - `global.json` pins SDK **10.0.403** (`rollForward: latestPatch`). The Native AOT compiler version is not set in the repo: it comes from the SDK's bundled versions file, where 10.0.403 sets `ILCompilerPackVersion="10.0.14"` (it is 10.0.12 in SDK 10.0.401).
 - `NOTICE` embeds the third-party notices shipped with the 10.0.14 compiler package. Their text is byte-identical to the 10.0.12 package's, so only the two marker lines changed; `release.ps1` checks this embedding against the resolved package.
@@ -96,9 +96,23 @@ Output: size 1,570,304 bytes, SHA-256 prefix `5cb1e5a5947701d6`, and `0 0` (ASCI
 
 **OWNER-ACCEPTED EXCEPTION (one-time, for this remediation).** The production timing gate FAILED by 0.8 ms (40.8 ms against 40 ms, 2%). The owner accepted that result as a documented, one-time performance exception. The 40 ms threshold and `scripts/verify-bridge-aot.ps1` were not changed, and the verification suite is not described as passing. Supporting measurement (same production code path, 40 runs per figure, medians in ms, old helper built with 10.0.12 against the new helper built with 10.0.14, interleaved on the same machine): round 1 39.3 against 39.1, round 2 39.3 against 40.0, round 3 40.4 against 39.6. The old helper also exceeded 40 ms in one round, so this does not show a regression, but it also does not explain why the script's own run reached 40.8. These figures come from one machine with PowerShell process-start overhead included.
 
-## Not yet done
+## rc.2 preparation record (2026-11-10, same machine and tooling, version `1.0.0-rc.2`, from `main` at `a2bcdfe`)
 
-- `scripts\release.ps1` has not been run, so a rebuilt release ZIP does not exist and rc.1 remains the only published build.
-- No release, tag, signing or publication.
-- The helper has not been exercised against a live Claude Code session; its behaviour is covered by the automated process tests above.
+These are the results of the checks run while preparing `1.0.0-rc.2` (version bump and documentation edits only; no code, script, dependency or threshold change). The release build and its packaging verification are repeated on the final release commit before any tag.
+
+| Check | Result |
+|---|---|
+| `build QuotaDuck.sln -c Release` | Succeeded, 0 warnings, 0 errors |
+| `test QuotaDuck.sln -c Release` | **PASSED**: 1,071 tests, 0 failed, 0 skipped (Art 49, Core 398, Coordinator 125, Codex 63, Bridge 148, App 288) |
+| `check-denylist.ps1` | **PASSED**: 65 production files, 8 narrow allowances, no violations |
+| `verify-bridge-aot.ps1` | **PASSED** (exit 0, "VERIFY OK") |
+
+Native AOT verification detail for this run: helper 1,570,304 bytes (1.50 MB, gate 2 MB); no test-hook strings; 34 process tests passed; test-seam timing median 31.0 ms; **production timing median 37.9 ms against the 40 ms gate (PASS)**; Step-0 harness cross-check median 30 ms.
+
+**Timing history, stated plainly.** The earlier verification run recorded above FAILED the production timing gate at 40.8 ms; that result and its owner-accepted one-time exception stand and are not rewritten. This later run measured 37.9 ms and passed with no exception. The 40 ms threshold and `scripts/verify-bridge-aot.ps1` were not changed. The two results (40.8 ms and 37.9 ms), together with the side-by-side comparison above (old and new helper both about 39 to 40 ms), show that this gate is sensitive to machine noise on this hardware.
+
+## Still open
+
+- No code signing: `1.0.0-rc.2` is unsigned, like rc.1. Use the published SHA-256.
+- A live Claude Code integration test of the rc.2 helper is tracked in the rc.2 acceptance checklist; until it is recorded it has not been done.
 - The advisory's exact scope for the Native AOT runtime pack beyond the fields quoted above was not independently re-read in full.
