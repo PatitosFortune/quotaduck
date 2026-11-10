@@ -32,12 +32,14 @@ d232e2545bce18da9eadb6cdce8297fd147cc36d627697776acb129072fecc38  quotaduck-soci
 
 The two SVG hashes also match the `sourceSHA256` values in the original package's render report.
 
-## Rights and brand use (partly unresolved)
+## Rights and brand use
 
-- QuotaDuck's source code, its pixel-art generator and the pond art are covered by this repository's MIT licence (`LICENSE`, `NOTICE`).
-- The Patitos Fortune name, wordmark and "Impossible Duck" mark that appear in these images are **Patitos Fortune brand artwork**. The organization's published brand notice says its brand artwork is reserved and that public visibility or a software licence does not by itself grant a licence to use it: <https://github.com/PatitosFortune/.github/blob/main/BRAND_NOTICE.md>.
-- **Unresolved:** `NOTICE` states that all of QuotaDuck's artwork is original and MIT-licensed. That statement predates these images and was not written with the brand mark in mind, so it is not settled whether the composed header and social card (pond art plus brand mark) are MIT-licensed or governed by the brand notice. Until the owner decides, treat the Patitos Fortune name, wordmark and duck mark in these files as **not licensed for reuse**, and the pond art as MIT. No trademark registration is claimed here.
-- Neither image should be reused to suggest endorsement by, or affiliation with, Patitos Fortune.
+These images combine two kinds of material with different terms. The composed images as a whole are **not** unconditionally MIT-licensed.
+
+- **QuotaDuck art (MIT).** The existing QuotaDuck-generated pixel ponds, ducks, gauges and tray artwork, including the pond art embedded in these images, remain MIT-licensed under this repository's `LICENSE` and `NOTICE`.
+- **Patitos Fortune brand assets (reserved).** The Patitos Fortune name, wordmark and geometric Impossible Duck identity used in these images are subject to the organization's published brand notice, unless separately licensed or authorized: <https://github.com/PatitosFortune/.github/blob/main/BRAND_NOTICE.md>.
+- **Composition.** Each image contains both the MIT-licensed QuotaDuck art and the reserved Patitos Fortune brand assets. Using the MIT-licensed art on its own does not carry any right to the brand assets.
+- **Affiliation.** QuotaDuck is an official Patitos Fortune project. Third parties must not use the Patitos Fortune identity to imply endorsement or affiliation without permission.
 
 ## Changing these assets
 
