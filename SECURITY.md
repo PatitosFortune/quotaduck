@@ -10,8 +10,7 @@ Only the latest source on `main` and the latest published release (currently the
 
 Please **do not put vulnerability details in a public issue, pull request or discussion.**
 
-1. **Preferred:** open the repository's **Security** tab. If it offers **Report a vulnerability**, use it; that creates a private report visible only to the maintainer. (This page does not assume that option is enabled. If the button is missing or the form does not open, use step 2.)
-2. **Fallback:** open a public issue titled `Security contact request` that contains **no technical details** (no exploit steps, no sample files, no paths), only a request for a private way to send them. The maintainer will answer in the issue and arrange a private channel.
+Report vulnerabilities **privately** through this repository's **Security** tab: choose **Report a vulnerability**. That opens a private report visible only to the maintainer, so nothing is disclosed publicly.
 
 There is no dedicated security email address. Please do not guess one.
 
@@ -33,7 +32,7 @@ QuotaDuck's own code and packaging, for example:
 - Missing code signing on the release candidate. That is documented in the README and release notes.
 - Automated-scanner output without a demonstrated impact on QuotaDuck.
 
-A known build-toolchain advisory that was assessed as not reachable from the helper is written up in [`docs/security/NU1903-ILCOMPILER-BROTLI.md`](docs/security/NU1903-ILCOMPILER-BROTLI.md); you do not need to report it again.
+A known build-toolchain advisory (a Brotli decoder issue in the .NET Native AOT toolchain used to build the helper) is assessed in [`docs/security/NU1903-ILCOMPILER-BROTLI.md`](docs/security/NU1903-ILCOMPILER-BROTLI.md). No reachable Brotli use has been identified in QuotaDuck, but exploitability has not been conclusively ruled out. You do not need to report that advisory itself again; a concrete way to reach the affected code from QuotaDuck would be a valid report.
 
 ## What to expect
 
