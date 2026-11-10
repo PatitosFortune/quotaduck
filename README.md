@@ -3,8 +3,10 @@
 A tiny Windows tray widget that shows your **Claude** and **ChatGPT / Codex** usage side by side: two pixel ponds, one duck each. The water level is how much quota you have *left*; the numbers are always printed beside it.
 
 > **Release candidate `1.0.0-rc.1`, unsigned.** See [Unsigned build and SmartScreen](#unsigned-build-and-smartscreen).
+>
+> The source on `main` can be ahead of the `1.0.0-rc.1` download: for example the **Copy** buttons and the refreshed card layout are in the source but **not** in the rc.1 ZIP. The release notes describe exactly what the download contains.
 
-- **Local-first.** No telemetry, no analytics, no updater, no network code of its own.
+- **Local-first.** No telemetry, no analytics, no updater, no network code of its own. (The Codex quota read starts Codex, which may itself contact its provider; see [Privacy and security notes](#privacy-and-security-notes).)
 - **Never spends your quota.** QuotaDuck never sends a prompt or makes a model call. It only reads usage numbers that already exist.
 - **No credentials.** It does not read cookies, browser storage, `auth.json` or Claude credentials, needs no admin rights, installs no service and does not start with Windows.
 - **Your Claude settings are yours.** QuotaDuck never edits them. It shows you a snippet; you paste it.
@@ -28,7 +30,7 @@ Claude usage reaches QuotaDuck **only while Claude Code runs in a terminal** (a 
 ## Requirements
 
 - Windows 11, 64-bit (developed and tested on Windows 11).
-- The **.NET 10 Desktop Runtime (x64)**. If it is missing, Windows shows a message with an official download link when you start QuotaDuck. Download it from Microsoft only: <https://dotnet.microsoft.com/download/dotnet/10.0> (choose ".NET Desktop Runtime", x64).
+- The **.NET 10 Desktop Runtime (x64)**. If it is missing, Windows shows a message with an official download link when you start QuotaDuck. Download it from Microsoft only: <https://dotnet.microsoft.com/download/dotnet/10.0> (choose ".NET Desktop Runtime", x64). QuotaDuck does not bundle or update the runtime, so keep it patched (see [Privacy and security notes](#privacy-and-security-notes)).
 - For the Codex card: the Codex app installed from the Microsoft Store. QuotaDuck only starts its quota read.
 - For the Claude card: Claude Code in a terminal (see setup).
 
@@ -72,6 +74,17 @@ Then start Claude Code in a terminal and send a message; numbers appear after it
 
 QuotaDuck reads your Claude settings in one narrow way: when you open the flyout while Claude has never reported, it checks whether a top-level `statusLine` key exists in `%USERPROFILE%\.claude\settings.json` so it can show the right instructions. It does not keep the command text and never writes to the file.
 
+## Privacy and security notes
+
+What QuotaDuck does and does not do, stated plainly:
+
+- **The Codex refresh can make Codex contact its provider.** QuotaDuck has no network client of its own. To read Codex quota it starts the installed Codex program (`codex app-server`, found by an absolute, validated path) and sends it only three messages: `initialize`, `initialized` and the quota read. Codex itself may contact its provider to answer that read; that traffic is Codex's, under your own Codex sign-in, and QuotaDuck neither sees nor stores your credentials. It never sends a prompt or makes a model call. Reads happen when you open the flyout for the first time, about every 10 minutes while the flyout stays open, once shortly after a known quota window resets (also while it is hidden), and when you press **Refresh** (at most once a minute); nothing is polled while the flyout is hidden otherwise.
+- **Copied usage reports can outlive the paste.** **Copy** and **Copy both** put a plain-text report (percentages, reset times and timestamps only) on the clipboard, and only when you press them. Windows clipboard history (Win+V) and cloud clipboard sync, if you have turned them on, can keep that text, and anything you paste it into keeps it too. Clear the clipboard history if that matters to you.
+- **The Claude status-line helper is a program Claude Code runs.** You point your Claude settings at `quotaduck-statusline.exe`, and Claude Code then starts that file every time it refreshes its status line. Keep the `QuotaDuck` folder somewhere only you can change, point the setting only at the real file (the setup snippet fills in the right path), and check the ZIP's SHA-256 before you trust it. If something else could replace that file, it would run as you. The helper only reads the JSON that Claude Code gives it and writes a small local state file under `%LOCALAPPDATA%\QuotaDuck`; QuotaDuck never edits your Claude settings.
+- **Signing.** `1.0.0-rc.1` is not code-signed, and there is no commitment that any particular release will be signed. Treat the SHA-256 in the release notes as your integrity check.
+- **Keep your .NET Desktop Runtime patched.** The tray app runs on the .NET 10 Desktop Runtime you install, so Microsoft's security updates reach it only if you apply them (Windows Update, or the current installer from Microsoft). QuotaDuck does not update the runtime for you. The helper is a separate Native AOT program with its own copy of the runtime parts it needs; a toolchain advisory about it is assessed in [`docs/security/NU1903-ILCOMPILER-BROTLI.md`](docs/security/NU1903-ILCOMPILER-BROTLI.md).
+- **Reporting a problem.** See [`SECURITY.md`](SECURITY.md). Please do not post vulnerability details in a public issue.
+
 ## Uninstall
 
 1. Right-click the tray icon → **Exit**.
@@ -83,7 +96,7 @@ QuotaDuck writes nothing else: no registry entries, no scheduled tasks, no autos
 
 ## Unsigned build and SmartScreen
 
-`1.0.0-rc.1` is **not code-signed**. A downloaded copy may show "Windows protected your PC / Unknown publisher" until you unblock it (step 2 above) or choose **More info → Run anyway**. Only do that for a file whose SHA-256 matches the published `SHA256SUMS.txt`. Code signing is planned for `1.0.0`.
+`1.0.0-rc.1` is **not code-signed**. A downloaded copy may show "Windows protected your PC / Unknown publisher" until you unblock it (step 2 above) or choose **More info → Run anyway**. Only do that for a file whose SHA-256 matches the published `SHA256SUMS.txt`. Code signing is not currently committed for any particular release.
 
 ## What is in the ZIP
 
@@ -108,6 +121,8 @@ powershell -File scripts\release.ps1                                  # builds a
 ```
 
 Design notes live in `docs/` (`docs/app`, `docs/bridge`, `docs/codex`, `docs/coordinator`, `docs/art`); project constraints are in `CLAUDE.md`.
+
+The `spikes/` folder holds throw-away prototypes that answered early design questions (Claude status-line behaviour, process launching, Codex discovery, footprint). It is **not** part of the product: it is not in `QuotaDuck.sln`, not built by the commands above, not referenced by `src/`, and not in the release ZIP. You do not need to run anything in it (see `spikes/README.md`).
 
 ## Independence
 
