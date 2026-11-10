@@ -112,6 +112,22 @@ public class APlusLayoutTests
     }
 
     [Fact]
+    public void Chip_Reading_WhenCodexIsReading_EvenThoughOldValuesAreStillShown_AndFreshOtherwise()
+    {
+        DateTimeOffset lastRead = T.AddMinutes(-12);
+        CompactPresentation reading = Compact(Snap.Make(T, Fresh(), Snap.Codex(lastRead), reading: true, allowed: false));
+        Assert.Equal("Reading…", reading.Codex.Headline);
+        Assert.Equal("Reading", reading.Codex.StatusWord);
+        Assert.Equal("○ Reading", reading.Codex.Chip);
+        Assert.NotEmpty(reading.Codex.Rows);                                                   // the previous values are still on screen
+        Assert.Equal("Fresh", reading.Claude.StatusWord);                                      // the other provider is unaffected
+
+        CompactPresentation idle = Compact(Snap.Make(T, Fresh(), Snap.Codex(lastRead)));       // the same data, not reading: the unchanged mapping (Fresh)
+        Assert.Equal("Fresh", idle.Codex.StatusWord);
+        Assert.Equal("● Fresh", idle.Codex.Chip);
+    }
+
+    [Fact]
     public void Chip_Off_WhenAProviderIsTurnedOff()
     {
         CompactPresentation c = Compact(Snap.Make(T, claudeEnabled: false));

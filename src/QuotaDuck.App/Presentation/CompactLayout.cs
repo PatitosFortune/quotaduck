@@ -108,7 +108,7 @@ public static class CompactCard
             Tone.Error => ("Unavailable", "!"),
             Tone.Warn => ("Problem", "!"),
             Tone.Good => ("Fresh", "●"),
-            Tone.Neutral => c.Windows.Count > 0 ? ("Quiet", "●") : ("Reading", "○"),
+            Tone.Neutral => c.Windows.Count > 0 && c.Headline != "Reading…" ? ("Quiet", "●") : ("Reading", "○"),   // a read in progress is "Reading" even when old values are still shown
             _ when c.Headline == IssueText.For(QuotaDuck.Coordinator.ProviderIssue.NotConfigured) => ("Off", "○"),
             _ when anyValue || c.Windows.Any(w => w.StateText == "Reset") => ("Old", "◐"),
             _ => ("Waiting", "○"),
