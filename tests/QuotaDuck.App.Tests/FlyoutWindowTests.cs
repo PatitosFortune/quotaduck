@@ -211,13 +211,13 @@ public class FlyoutWindowTests
             vm.Refresh();
             Sta.Flush();
             string[] live = Texts(w);
-            Assert.Contains("58% left", live);                                              // % left is the one visible percentage
-            Assert.Contains("69% left", live);
+            Assert.Contains("58%", live);                                                   // the remaining % is the hero number, with a small "left" beside it
+            Assert.Contains("69%", live);
+            Assert.Contains("left", live);
             Assert.DoesNotContain(live, x => x.Contains("% used", StringComparison.Ordinal));
             Assert.Contains("Resets in 3 h · 13:00", live);
-            Assert.Contains("Last changed 3 min ago", live);
-            Assert.Contains("Reported by Claude Code", live);
-            Assert.Contains("Up to date", live);
+            Assert.Contains("Reported by Claude Code · changed 3 min ago", live);     // status + age on one line (non-breaking age)
+            Assert.Contains("Up to date · read 1 min ago", live);
             Assert.Contains("Claude reports only from terminal Claude Code sessions.", live);
         });
     }
@@ -453,7 +453,7 @@ public class FlyoutWindowTests
             Assert.DoesNotContain(Sta.Descendants<TextBox>(w), t => t.IsVisible);
             Assert.False(ShowsText(w, "Waiting for terminal setup"));
             Assert.Equal("Refresh Codex quota", AutomationProperties.GetName(Assert.Single(VisibleButtons(w))));
-            Assert.Contains("58% left", Texts(w));
+            Assert.Contains("58%", Texts(w));
         });
     }
 

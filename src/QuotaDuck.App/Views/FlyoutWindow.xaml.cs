@@ -130,7 +130,7 @@ public partial class FlyoutWindow : Window, IFlyout
                 UpdateLayout();
             }
 
-            double widthDip = ActualWidth > 0 ? ActualWidth : Body.Width + FrameDip;
+            double widthDip = ActualWidth > 0 ? ActualWidth : Body.ContentWidthDip + FrameDip;
             double heightDip = ActualHeight > 0 ? ActualHeight : 360;
             FlyoutPlacementResult r = FlyoutPlacement.Place(monitors, Anchor, widthDip, heightDip);
             LastPlacement = r;
@@ -141,7 +141,7 @@ public partial class FlyoutWindow : Window, IFlyout
         {
             Rect wa = SystemParameters.WorkArea;                               // reliable-geometry-unavailable fallback: the old placement
             MaxHeight = Math.Max(240, wa.Height - 24);
-            Left = wa.Right - (ActualWidth > 0 ? ActualWidth : Body.Width + FrameDip) - 12;
+            Left = wa.Right - (ActualWidth > 0 ? ActualWidth : Body.ContentWidthDip + FrameDip) - 12;
             Top = Math.Max(wa.Top + 8, wa.Bottom - (ActualHeight > 0 ? ActualHeight : 360) - 12);
         }
     }

@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 using QuotaDuck.App.Presentation;
 using QuotaDuck.App.Shell;
 
@@ -19,7 +20,19 @@ public partial class CompactFlyoutContent : UserControl
     public CompactFlyoutContent()
     {
         InitializeComponent();
-        Width = CompactLayoutPolicy.SideBySideContentWidthDip;
+    }
+
+    /// <summary>
+    /// The content width for the current mode at the DPI this control is actually laid out at (the cards are exactly as wide as their art, so the
+    /// pond, the gauges and the text share one edge). Computed at measure time, when the visual tree and its DPI are known.
+    /// </summary>
+    public double ContentWidthDip => CompactLayoutPolicy.ContentWidthDip(_mode, VisualTreeHelper.GetDpi(this).DpiScaleX, CardBorder.Left);
+
+    protected override Size MeasureOverride(Size constraint)
+    {
+        double w = ContentWidthDip;
+        Size desired = base.MeasureOverride(new Size(w, constraint.Height));
+        return new Size(w, desired.Height);
     }
 
     public event Action? RefreshRequested;
@@ -28,7 +41,7 @@ public partial class CompactFlyoutContent : UserControl
 
     public event Action<ExportScope>? CopyUsageRequested;
 
-    /// <summary>The arrangement. The width is fixed per mode: text wraps at the card width instead of widening the flyout.</summary>
+    /// <summary>The arrangement. The width is fixed per mode and DPI: text wraps at the card width instead of widening the flyout.</summary>
     public CompactMode Mode
     {
         get => _mode;
@@ -36,7 +49,7 @@ public partial class CompactFlyoutContent : UserControl
         {
             _mode = value;
             Cards.Columns = value == CompactMode.SideBySide ? 2 : 1;
-            Width = value == CompactMode.SideBySide ? CompactLayoutPolicy.SideBySideContentWidthDip : CompactLayoutPolicy.StackedContentWidthDip;
+            InvalidateMeasure();
         }
     }
 

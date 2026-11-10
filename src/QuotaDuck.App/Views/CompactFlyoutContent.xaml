@@ -17,33 +17,90 @@
             <Setter Property="AutomationProperties.Name" Value="{Binding AccessibleName}" />
         </Style>
 
-        <!-- 5-hour / Weekly: label (+ state tag) | "58% left", then the gauge, then the reset line -->
+        <views:ButtonIconConverter x:Key="Icon" />
+        <views:ButtonLabelConverter x:Key="Label" />
+
+        <!-- Icon buttons (A+ 2). The Button keeps its plain-string Content (the status text), its explicit accessible name, tooltip, keyboard focus and
+             the system template (so the focus rectangle and High Contrast behave as before); only the ContentTemplate draws the icon. -->
+        <DataTemplate x:Key="CopyIcon">
+            <Path Data="{Binding Converter={StaticResource Icon}, ConverterParameter=copy}" Width="16" Height="16" Stretch="None" StrokeThickness="1.5"
+                  StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
+        </DataTemplate>
+        <DataTemplate x:Key="RefreshIcon">
+            <StackPanel Orientation="Horizontal">
+                <Path Data="{Binding Converter={StaticResource Icon}, ConverterParameter=refresh}" Width="16" Height="16" Stretch="None" StrokeThickness="1.5"
+                      StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                      Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
+                <!-- the cooldown seconds stay visible next to the icon -->
+                <TextBlock Text="{Binding Converter={StaticResource Label}, ConverterParameter=refresh}" Margin="5,0,0,0" FontSize="12" VerticalAlignment="Center"
+                           Visibility="{Binding Text, RelativeSource={RelativeSource Self}, Converter={StaticResource Show}}" />
+            </StackPanel>
+        </DataTemplate>
+        <DataTemplate x:Key="BothIcon">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                <Path Data="{Binding Converter={StaticResource Icon}, ConverterParameter=both}" Width="16" Height="16" Stretch="None" StrokeThickness="1.5"
+                      StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                      Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
+                <TextBlock Text="{Binding Converter={StaticResource Label}, ConverterParameter=both}" Margin="6,0,0,0" FontWeight="SemiBold" VerticalAlignment="Center" />
+            </StackPanel>
+        </DataTemplate>
+        <Style x:Key="IconButton" TargetType="Button">
+            <Setter Property="Height" Value="28" />
+            <Setter Property="MinWidth" Value="28" />
+            <Setter Property="Padding" Value="6,0" />
+        </Style>
+
+        <!-- 5-hour / Weekly: label (+ OLD / RESET badge) | the remaining % as the hero number, then the gauge, then the reset line -->
         <DataTemplate x:Key="Row">
-            <StackPanel Margin="0,6,0,0" AutomationProperties.Name="{Binding AccessibleName}">
+            <StackPanel Margin="0,7,0,0" AutomationProperties.Name="{Binding AccessibleName}">
                 <DockPanel>
-                    <TextBlock Text="{Binding Primary}" DockPanel.Dock="Right" FontWeight="Bold" Foreground="{Binding Tone, Converter={StaticResource ToneBrush}}" />
-                    <TextBlock VerticalAlignment="Bottom">
-                        <Run Text="{Binding Label, Mode=OneWay}" FontWeight="SemiBold" /><Run Text="{Binding StateTag, Mode=OneWay}" FontSize="11.5" />
-                    </TextBlock>
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Bottom">
+                        <TextBlock Text="{Binding Hero}" FontSize="26" FontWeight="Bold" LineHeight="28" LineStackingStrategy="BlockLineHeight" Foreground="{Binding Tone, Converter={StaticResource ToneBrush}}" />
+                        <TextBlock Text="{Binding HeroUnit}" FontSize="11.5" FontWeight="SemiBold" Margin="4,0,0,3" VerticalAlignment="Bottom" Foreground="{Binding Tone, Converter={StaticResource ToneBrush}}" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom">
+                        <TextBlock Text="{Binding Label}" FontWeight="SemiBold" FontSize="12.5" VerticalAlignment="Bottom" />
+                        <Border BorderThickness="1" CornerRadius="2" Padding="4,0" Margin="6,0,0,1" VerticalAlignment="Bottom" BorderBrush="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}"
+                                Visibility="{Binding Badge, Converter={StaticResource Show}}">
+                            <TextBlock Text="{Binding Badge}" FontSize="10.5" FontWeight="Bold" />
+                        </Border>
+                    </StackPanel>
                 </DockPanel>
-                <views:PixelImage Scene="{Binding Gauge}" TargetWidth="272" HorizontalAlignment="Left" Margin="0,3,0,2" Decorative="True" />
+                <views:PixelImage Scene="{Binding Gauge}" TargetWidth="288" HorizontalAlignment="Left" Margin="0,3,0,2" Decorative="True" />
                 <TextBlock Text="{Binding ResetLine}" FontSize="12" Opacity="0.85" TextWrapping="Wrap" />
             </StackPanel>
         </DataTemplate>
 
         <DataTemplate x:Key="Card">
             <Border BorderBrush="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}" BorderThickness="{x:Static views:CompactFlyoutContent.CardBorder}"
-                    CornerRadius="4" Padding="10,8" Margin="4" MinWidth="296">
+                    CornerRadius="4" Padding="12,8,12,10" Margin="4">
                 <StackPanel>
-                    <!-- one compact "copy this provider's usage as text" button per card -->
-                    <DockPanel>
-                        <Button DockPanel.Dock="Right" MinWidth="72" Padding="8,1" Content="{Binding CopyText}" ToolTip="{Binding CopyName}"
+                    <!-- name | subtle status chip (glyph + word) | Refresh (Codex only) | Copy -->
+                    <Grid Height="32">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="{Binding Name}" FontSize="15" FontWeight="Bold" VerticalAlignment="Center" />
+                        <Border Grid.Column="1" Margin="8,0,0,0" Padding="6,0" VerticalAlignment="Center" BorderThickness="1.5" CornerRadius="3"
+                                BorderBrush="{Binding Tone, Converter={StaticResource ToneBrush}}">
+                            <TextBlock Text="{Binding Chip}" FontSize="11.5" FontWeight="SemiBold" Foreground="{Binding Tone, Converter={StaticResource ToneBrush}}" />
+                        </Border>
+                        <Button Grid.Column="3" Style="{StaticResource IconButton}" Margin="0,0,6,0" Content="{Binding Refresh.Text}" ContentTemplate="{StaticResource RefreshIcon}"
+                                IsEnabled="{Binding Refresh.Enabled}" ToolTip="{Binding Refresh.Hint, TargetNullValue='Refresh Codex quota'}"
+                                Visibility="{Binding Refresh, Converter={StaticResource Show}}" Click="OnRefreshClick" AutomationProperties.Name="Refresh Codex quota" />
+                        <Button Grid.Column="4" Style="{StaticResource IconButton}" Content="{Binding CopyText}" ContentTemplate="{StaticResource CopyIcon}" ToolTip="{Binding CopyName}"
                                 Click="OnCopyProviderClick" AutomationProperties.Name="{Binding CopyName}" />
-                        <TextBlock Text="{Binding Name}" FontSize="15" FontWeight="Bold" VerticalAlignment="Center" />
-                    </DockPanel>
-                    <views:PixelImage Scene="{Binding Pond}" TargetWidth="296" HorizontalAlignment="Center" Margin="0,4,0,2"
+                    </Grid>
+                    <views:PixelImage Scene="{Binding Pond}" TargetWidth="288" HorizontalAlignment="Left" Margin="0,4,0,6"
                                       AutomationProperties.Name="{Binding PondDescription}" />
-                    <TextBlock Text="{Binding Headline}" TextWrapping="Wrap" FontWeight="SemiBold" FontSize="12.5" Foreground="{Binding Tone, Converter={StaticResource ToneBrush}}" />
+                    <TextBlock TextWrapping="Wrap" FontSize="12.5">
+                        <Run Text="{Binding Headline, Mode=OneWay}" FontWeight="SemiBold" Foreground="{Binding Tone, Converter={StaticResource ToneBrush}}" /><Run Text="{Binding AgeSuffix, Mode=OneWay}" Foreground="{DynamicResource {x:Static SystemColors.GrayTextBrushKey}}" />
+                    </TextBlock>
                     <ItemsControl ItemsSource="{Binding Rows}" ItemTemplate="{StaticResource Row}" ItemContainerStyle="{StaticResource RowContainer}" IsTabStop="False"
                                   Visibility="{Binding HasRows, Converter={StaticResource BoolToVisible}}" />
                     <TextBlock Text="{Binding Note}" TextWrapping="Wrap" FontSize="11.5" Opacity="0.85" Margin="0,4,0,0" Visibility="{Binding Note, Converter={StaticResource Show}}" />
@@ -53,12 +110,6 @@
                                 AutomationProperties.Name="{Binding SetupButtonName}" />
                         <TextBlock Text="Waiting for terminal setup" VerticalAlignment="Center" FontSize="12" />
                     </DockPanel>
-                    <DockPanel Margin="0,6,0,0">
-                        <Button DockPanel.Dock="Right" MinWidth="88" Padding="8,2" Content="{Binding Refresh.Text}" IsEnabled="{Binding Refresh.Enabled}" ToolTip="{Binding Refresh.Hint}"
-                                Visibility="{Binding Refresh, Converter={StaticResource Show}}" Click="OnRefreshClick" AutomationProperties.Name="Refresh Codex quota" />
-                        <TextBlock Text="{Binding Freshness}" FontSize="11.5" Opacity="0.75" VerticalAlignment="Center" TextWrapping="Wrap" />
-                    </DockPanel>
-                    <TextBlock Text="{Binding Footer}" TextWrapping="Wrap" Opacity="0.7" FontSize="11" Margin="0,4,0,0" Visibility="{Binding Footer, Converter={StaticResource Show}}" />
                 </StackPanel>
             </Border>
         </DataTemplate>
@@ -91,10 +142,14 @@
             <ContentControl Content="{Binding Compact.Claude}" ContentTemplate="{StaticResource Card}" IsTabStop="False" />
             <ContentControl Content="{Binding Compact.Codex}" ContentTemplate="{StaticResource Card}" IsTabStop="False" />
         </UniformGrid>
-        <!-- the primary way to share both providers at once: a plain-text report to paste into an assistant -->
-        <Button HorizontalAlignment="Center" MinWidth="200" Margin="4,4,4,2" Padding="12,4" FontWeight="SemiBold" Content="{Binding Compact.CopyBothText}"
-                ToolTip="Copy a plain-text report of Claude and Codex usage, ready to paste into an AI assistant"
-                AutomationProperties.Name="Copy both Claude and Codex usage as text to the clipboard" Click="OnCopyBothClick" />
+        <!-- the primary way to share both providers at once: a plain-text report to paste into an assistant; the one compact footer note sits beside it -->
+        <DockPanel Margin="6,6,6,2" LastChildFill="True">
+            <Button DockPanel.Dock="Left" MinWidth="116" Height="30" Padding="12,0" Content="{Binding Compact.CopyBothText}" ContentTemplate="{StaticResource BothIcon}"
+                    ToolTip="Copy a plain-text report of Claude and Codex usage, ready to paste into an AI assistant"
+                    AutomationProperties.Name="Copy both Claude and Codex usage as text to the clipboard" Click="OnCopyBothClick" />
+            <TextBlock Text="{Binding Compact.FooterNote}" TextWrapping="Wrap" FontSize="11.5" Opacity="0.8" Margin="12,0,0,0" VerticalAlignment="Center"
+                       Visibility="{Binding Compact.FooterNote, Converter={StaticResource Show}}" />
+        </DockPanel>
         <ContentControl Content="{Binding Compact.Guide}" ContentTemplate="{StaticResource Guide}" IsTabStop="False"
                         Visibility="{Binding Compact.Guide, Converter={StaticResource Show}}" />
         <TextBlock Text="{Binding Compact.RefreshFeedback}" TextWrapping="Wrap" Margin="6,2" Visibility="{Binding Compact.RefreshFeedback, Converter={StaticResource Show}}"
