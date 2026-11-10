@@ -10,7 +10,7 @@ Only the latest source on `main` and the latest published release (currently the
 
 Please **do not put vulnerability details in a public issue, pull request or discussion.**
 
-Report vulnerabilities **privately** through this repository's **Security** tab: choose **Report a vulnerability**. That opens a private report visible only to the maintainer, so nothing is disclosed publicly.
+Report vulnerabilities **privately** through this repository's **Security** tab: choose **Report a vulnerability** (direct link: <https://github.com/PatitosFortune/quotaduck/security/advisories/new>). That opens a private report visible only to the maintainer, so nothing is disclosed publicly.
 
 There is no dedicated security email address. Please do not guess one.
 

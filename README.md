@@ -2,9 +2,13 @@
 
 A tiny Windows tray widget that shows your **Claude** and **ChatGPT / Codex** usage side by side: two pixel ponds, one duck each. The water level is how much quota you have *left*; the numbers are always printed beside it.
 
+![QuotaDuck, a Patitos Fortune project: two pixel ponds, one duck each. Two ponds. Your quota at a glance.](docs/brand/quotaduck/quotaduck-header.png)
+
 > **Release candidate `1.0.0-rc.1`, unsigned.** See [Unsigned build and SmartScreen](#unsigned-build-and-smartscreen).
 >
 > The source on `main` can be ahead of the `1.0.0-rc.1` download: for example the **Copy** buttons and the refreshed card layout are in the source but **not** in the rc.1 ZIP. The release notes describe exactly what the download contains.
+
+[Releases](https://github.com/PatitosFortune/quotaduck/releases) · [Set up Claude](#set-up-claude-one-time) · [Security policy](SECURITY.md) · [Report a vulnerability privately](https://github.com/PatitosFortune/quotaduck/security/advisories/new)
 
 - **Local-first.** No telemetry, no analytics, no updater, no network code of its own. (The Codex quota read starts Codex, which may itself contact its provider; see [Privacy and security notes](#privacy-and-security-notes).)
 - **Never spends your quota.** QuotaDuck never sends a prompt or makes a model call. It only reads usage numbers that already exist.
@@ -83,7 +87,7 @@ What QuotaDuck does and does not do, stated plainly:
 - **The Claude status-line helper is a program Claude Code runs.** You point your Claude settings at `quotaduck-statusline.exe`, and Claude Code then starts that file every time it refreshes its status line. Keep the `QuotaDuck` folder somewhere only you can change, point the setting only at the real file (the setup snippet fills in the right path), and check the ZIP's SHA-256 before you trust it. If something else could replace that file, it would run as you. The helper only reads the JSON that Claude Code gives it and writes a small local state file under `%LOCALAPPDATA%\QuotaDuck`; QuotaDuck never edits your Claude settings.
 - **Signing.** `1.0.0-rc.1` is not code-signed, and there is no commitment that any particular release will be signed. Treat the SHA-256 in the release notes as your integrity check.
 - **Keep your .NET Desktop Runtime patched.** The tray app runs on the .NET 10 Desktop Runtime you install, so Microsoft's security updates reach it only if you apply them (Windows Update, or the current installer from Microsoft). QuotaDuck does not update the runtime for you. The helper is a separate Native AOT program with its own copy of the runtime parts it needs; a toolchain advisory about it is assessed in [`docs/security/NU1903-ILCOMPILER-BROTLI.md`](docs/security/NU1903-ILCOMPILER-BROTLI.md).
-- **Reporting a problem.** See [`SECURITY.md`](SECURITY.md). Please do not post vulnerability details in a public issue.
+- **Reporting a problem.** See [`SECURITY.md`](SECURITY.md) and [report a vulnerability privately](https://github.com/PatitosFortune/quotaduck/security/advisories/new). Please do not post vulnerability details in a public issue.
 
 ## Uninstall
 
@@ -127,6 +131,8 @@ The `spikes/` folder holds throw-away prototypes that answered early design ques
 ## Independence
 
 QuotaDuck is an independent implementation. An existing public project in the same space (TokenFish, `pixelsncodes/tokenfish`, which has no licence) was studied as a **reference only**. No code, tests, assets or product text were copied from it; QuotaDuck's structure, art, naming, tests and constants are its own. A no-copy comparison against that project's commit `71ab591947ebabf6b7e03e0344ceb084665477f7` found only generic or provider-contract-dictated overlap (see `docs/spec/QuotaDuck-Phase1-Audit.md` §28).
+
+QuotaDuck is an independent project. It is not affiliated with or endorsed by Anthropic or OpenAI.
 
 ## License
 
