@@ -15,8 +15,11 @@ public partial class FlyoutWindow : Window, IFlyout
 
     private readonly IMonitorSource _monitors;
     private readonly IWindowMover _mover;
+    private const int WmEnterSizeMove = 0x0231;
+
     private bool _allowClose;
     private bool _replacePending;
+    private bool _userMoved;       // the user dragged it since it was last opened: stop pulling it back to the tray icon
 
     public FlyoutWindow(ShellViewModel vm, IMonitorSource? monitors = null, IWindowMover? mover = null)
     {
@@ -25,6 +28,7 @@ public partial class FlyoutWindow : Window, IFlyout
         _mover = mover ?? win32;
         InitializeComponent();
         DataContext = vm;
+        SourceInitialized += (_, _) => (PresentationSource.FromVisual(this) as HwndSource)?.AddHook(WindowMessageHook);
         Body.RefreshRequested += () => RefreshRequested?.Invoke();
         Body.CopySetupRequested += () => CopySetupRequested?.Invoke();
         Body.CopyUsageRequested += scope => CopyUsageRequested?.Invoke(scope);
@@ -34,6 +38,10 @@ public partial class FlyoutWindow : Window, IFlyout
             if (base.IsVisible)
             {
                 ReplaceLater();                                                  // second pass once the real size is known
+            }
+            else
+            {
+                _userMoved = false;                                              // hidden: the next open anchors to the tray icon again
             }
         };
         // content changes while open (a Codex read adds rows, the guide's details expand): keep the flyout fully on screen, next to the icon
@@ -82,8 +90,26 @@ public partial class FlyoutWindow : Window, IFlyout
 
     public void AllowClose() => _allowClose = true;
 
+    /// <summary>
+    /// Tells a drag by the user from every programmatic move or DPI-induced size change: only the OS move loop (WM_ENTERSIZEMOVE, sent when
+    /// the user starts dragging the title bar or uses Alt+Space, Move) counts as the user. Our own SetWindowPos and the resizes WPF does when
+    /// the window crosses a monitor with another DPI never send it. From then until the flyout is hidden or explicitly opened again the
+    /// tray-anchored re-placement is suppressed (otherwise a DPI-induced resize moved the window back to the tray corner while it was being
+    /// dragged, repeatedly: the cross-monitor flicker).
+    /// </summary>
+    internal nint WindowMessageHook(nint hwnd, int msg, nint wParam, nint lParam, ref bool handled)
+    {
+        if (msg == WmEnterSizeMove)
+        {
+            _userMoved = true;
+        }
+
+        return 0;
+    }
+
     void IFlyout.Show()
     {
+        _userMoved = false;                                                      // an explicit open anchors to the tray icon
         ApplyPlacement();
         base.Show();
         Activate();
@@ -93,7 +119,7 @@ public partial class FlyoutWindow : Window, IFlyout
 
     private void ReplaceLater()
     {
-        if (_replacePending)
+        if (_replacePending || _userMoved)
         {
             return;
         }
@@ -104,7 +130,7 @@ public partial class FlyoutWindow : Window, IFlyout
             () =>
             {
                 _replacePending = false;
-                if (base.IsVisible)
+                if (base.IsVisible && !_userMoved)
                 {
                     ApplyPlacement();
                 }
