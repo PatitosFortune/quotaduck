@@ -4,9 +4,9 @@ A tiny Windows tray widget that shows your **Claude** and **ChatGPT / Codex** us
 
 ![QuotaDuck, a Patitos Fortune project: two pixel ponds, one duck each. Two ponds. Your quota at a glance.](docs/brand/quotaduck/quotaduck-header.png)
 
-> **Release candidate `1.0.0-rc.1`, unsigned.** See [Unsigned build and SmartScreen](#unsigned-build-and-smartscreen).
+> **Release candidate `1.0.0-rc.2`, unsigned.** See [Unsigned build and SmartScreen](#unsigned-build-and-smartscreen).
 >
-> The source on `main` can be ahead of the `1.0.0-rc.1` download: for example the **Copy** buttons and the refreshed card layout are in the source but **not** in the rc.1 ZIP. The release notes describe exactly what the download contains.
+> `1.0.0-rc.2` is a security-maintenance candidate. It rebuilds the Claude status-line helper with a patched .NET Native AOT toolchain (see [Privacy and security notes](#privacy-and-security-notes)), and it also includes the **Copy** buttons and the refreshed card layout that were not in `1.0.0-rc.1`. The earlier rc.1 release stays available unchanged. The source on `main` can be ahead of any download; the release notes describe exactly what a download contains.
 
 [Releases](https://github.com/PatitosFortune/quotaduck/releases) · [Set up Claude](#set-up-claude-one-time) · [Security policy](SECURITY.md) · [Report a vulnerability privately](https://github.com/PatitosFortune/quotaduck/security/advisories/new)
 
@@ -41,7 +41,7 @@ Claude usage reaches QuotaDuck **only while Claude Code runs in a terminal** (a 
 ## Install
 
 1. Download `QuotaDuck-<version>-win-x64.zip` and, optionally, check it against `SHA256SUMS.txt`:
-   `Get-FileHash .\QuotaDuck-1.0.0-rc.1-win-x64.zip -Algorithm SHA256`
+   `Get-FileHash .\QuotaDuck-1.0.0-rc.2-win-x64.zip -Algorithm SHA256`
 2. Windows marks downloaded files. If you trust the download, right-click the ZIP → **Properties** → tick **Unblock** → OK, *then* extract. (Otherwise Windows may warn on first start.)
 3. Extract the `QuotaDuck` folder somewhere you keep for good, for example `%LOCALAPPDATA%\Programs\`, and **keep the folder name `QuotaDuck`**. Your Claude settings will point at the helper inside it, so moving it later means updating that path.
 4. Double-click `QuotaDuck.exe`. A duck appears in the tray.
@@ -50,7 +50,7 @@ To update, quit QuotaDuck (tray icon → right-click → **Exit**) and replace t
 
 ## Copy your usage as text
 
-**Not in the `1.0.0-rc.1` download.** The released rc.1 ZIP does not have it; it exists only in the source (`main`) until a later release is built (building from source gives it now). Each provider card has a **Copy** button and there is a **Copy both** button under the cards. They put a plain-text report on the clipboard (remaining and used percentages, reset times, when it was copied, and when each provider's data last changed) that you can paste into an AI assistant or a note. QuotaDuck writes to the clipboard **only when you press one of these buttons**, and what you then paste where is up to you. Copying never refreshes anything and never contacts a provider; stale, expired or missing values are labelled as such, never shown as 0%. Details: `docs/app/APP-SHELL.md`.
+**New in `1.0.0-rc.2`** (the earlier rc.1 download does not have it). Each provider card has a **Copy** button and there is a **Copy both** button under the cards. They put a plain-text report on the clipboard (remaining and used percentages, reset times, when it was copied, and when each provider's data last changed) that you can paste into an AI assistant or a note. QuotaDuck writes to the clipboard **only when you press one of these buttons**, and what you then paste where is up to you. Copying never refreshes anything and never contacts a provider; stale, expired or missing values are labelled as such, never shown as 0%. Details: `docs/app/APP-SHELL.md`.
 
 ## Set up Claude (one time)
 
@@ -85,8 +85,8 @@ What QuotaDuck does and does not do, stated plainly:
 - **The Codex refresh can make Codex contact its provider.** QuotaDuck has no network client of its own. To read Codex quota it starts the installed Codex program (`codex app-server`, found by an absolute, validated path) and sends it only three messages: `initialize`, `initialized` and the quota read. Codex itself may contact its provider to answer that read; that traffic is Codex's, under your own Codex sign-in, and QuotaDuck neither sees nor stores your credentials. It never sends a prompt or makes a model call. Reads happen when you open the flyout for the first time, about every 10 minutes while the flyout stays open, once shortly after a known quota window resets (also while it is hidden), and when you press **Refresh** (at most once a minute); nothing is polled while the flyout is hidden otherwise.
 - **Copied usage reports can outlive the paste.** **Copy** and **Copy both** put a plain-text report (percentages, reset times and timestamps only) on the clipboard, and only when you press them. Windows clipboard history (Win+V) and cloud clipboard sync, if you have turned them on, can keep that text, and anything you paste it into keeps it too. Clear the clipboard history if that matters to you.
 - **The Claude status-line helper is a program Claude Code runs.** You point your Claude settings at `quotaduck-statusline.exe`, and Claude Code then starts that file every time it refreshes its status line. Keep the `QuotaDuck` folder somewhere only you can change, point the setting only at the real file (the setup snippet fills in the right path), and check the ZIP's SHA-256 before you trust it. If something else could replace that file, it would run as you. The helper only reads the JSON that Claude Code gives it and writes a small local state file under `%LOCALAPPDATA%\QuotaDuck`; QuotaDuck never edits your Claude settings.
-- **Signing.** `1.0.0-rc.1` is not code-signed, and there is no commitment that any particular release will be signed. Treat the SHA-256 in the release notes as your integrity check.
-- **Keep your .NET Desktop Runtime patched.** The tray app runs on the .NET 10 Desktop Runtime you install, so Microsoft's security updates reach it only if you apply them (Windows Update, or the current installer from Microsoft). QuotaDuck does not update the runtime for you. The helper is a separate Native AOT program with its own copy of the runtime parts it needs. The published `1.0.0-rc.1` helper was built with a .NET toolchain (10.0.12) that a later Microsoft security advisory (a Brotli decoder issue) lists as affected. No path by which QuotaDuck could reach that code has been found, but that is not a proof. The repository now pins the .NET SDK (10.0.403) whose Native AOT toolchain is the patched 10.0.14, so a helper built from this source uses the patched toolchain. The `1.0.0-rc.1` release is unchanged; a release containing the rebuilt helper is pending release verification and owner approval. The assessment and the verification record are in [`docs/security/NU1903-ILCOMPILER-BROTLI.md`](docs/security/NU1903-ILCOMPILER-BROTLI.md).
+- **Signing.** `1.0.0-rc.2` is not code-signed, and there is no commitment that any particular release will be signed. Treat the SHA-256 in the release notes as your integrity check.
+- **Keep your .NET Desktop Runtime patched.** The tray app runs on the .NET 10 Desktop Runtime you install, so Microsoft's security updates reach it only if you apply them (Windows Update, or the current installer from Microsoft). QuotaDuck does not update the runtime for you. The helper is a separate Native AOT program with its own copy of the runtime parts it needs. The published `1.0.0-rc.1` helper was built with a .NET toolchain (10.0.12) that a later Microsoft security advisory (a Brotli decoder issue) lists as affected. No path by which QuotaDuck could reach that code has been found, but that is not a proof. The `1.0.0-rc.2` helper is built with the patched 10.0.14 toolchain (the repository pins .NET SDK 10.0.403); the `1.0.0-rc.1` release is unchanged. The assessment and the verification record are in [`docs/security/NU1903-ILCOMPILER-BROTLI.md`](docs/security/NU1903-ILCOMPILER-BROTLI.md).
 - **Reporting a problem.** See [`SECURITY.md`](SECURITY.md) and [report a vulnerability privately](https://github.com/PatitosFortune/quotaduck/security/advisories/new). Please do not post vulnerability details in a public issue.
 
 ## Uninstall
@@ -100,7 +100,7 @@ QuotaDuck writes nothing else: no registry entries, no scheduled tasks, no autos
 
 ## Unsigned build and SmartScreen
 
-`1.0.0-rc.1` is **not code-signed**. A downloaded copy may show "Windows protected your PC / Unknown publisher" until you unblock it (step 2 above) or choose **More info → Run anyway**. Only do that for a file whose SHA-256 matches the published `SHA256SUMS.txt`. Code signing is not currently committed for any particular release.
+`1.0.0-rc.2` is **not code-signed**. A downloaded copy may show "Windows protected your PC / Unknown publisher" until you unblock it (step 2 above) or choose **More info → Run anyway**. Only do that for a file whose SHA-256 matches the published `SHA256SUMS.txt`. Code signing is not currently committed for any particular release.
 
 ## What is in the ZIP
 

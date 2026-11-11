@@ -16,7 +16,7 @@
 
   <!-- Version / product metadata: ONE place. scripts/release.ps1 passes -p:SourceRevisionId=<git short hash> so the informational version reads 1.0.0-rc.1+<hash>. -->
   <PropertyGroup>
-    <Version>1.0.0-rc.1</Version>
+    <Version>1.0.0-rc.2</Version>
     <Product>QuotaDuck</Product>
     <Company>Patitos Fortune</Company>
     <Authors>Patitos Fortune</Authors>
