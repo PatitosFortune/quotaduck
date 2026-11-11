@@ -25,6 +25,21 @@ Laptop 1920x1080 at 125% (primary); two external 1920x1080 monitors at 100% thro
 | Clean exit (tray Exit) | Passed. Verified: no `QuotaDuck.exe`, no bridge process and no child process left; the state folder held only `bridge\claude-v1.json` |
 | Narrator or NVDA, high contrast, reduced motion, 150% / 200% scaling, 100% external-monitor visuals, stale/expired/missing labelling in Copy output, Win+V clipboard history, explicit full Tab order | **Not tested** (optional) |
 
+## Publication record
+
+| Item | Value |
+|---|---|
+| Release | https://github.com/PatitosFortune/quotaduck/releases/tag/v1.0.0-rc.2 (prerelease, not marked latest) |
+| Published | 2026-11-11 15:17 UTC |
+| Tag | `v1.0.0-rc.2`, annotated (tag object `51d65dd97f1fcac3410437d7d9398a2f88d39dfe`) at `c875db64301b9db967743527c8a5fbb9729ed70b` (merge of PR #8 into `main`) |
+| Assets (uploaded by the owner's account) | `QuotaDuck-1.0.0-rc.2-win-x64.zip`, 995,890 bytes, SHA-256 `7cc5cc9fbb47fc185257d5335754dd4fce06d2c74bf3c831b049452e24a113b2`; `SHA256SUMS.txt`, 207 bytes |
+| Signing | Unsigned |
+| rc.1 | Unchanged and still available (`v1.0.0-rc.1`, three assets, original timestamps) |
+
+Verification before and after publication (confirmed): the release build was reproducible (two builds from scratch, byte-identical ZIP and 12 files; manifest, NOTICE 10.0.14 and extraction checks passed); 1,071 tests passed; the denylist scan passed; the Native AOT verification passed (production timing median 30.8 ms against the 40 ms gate, no exception used); the final ZIP was smoke-tested by the owner (launch, Copy Claude and paste, Codex card, clean exit) with processes, state folder and Claude settings verified afterwards; the asset downloaded anonymously from the public release matches the hash above. The earlier one-time timing exception (40.8 ms during preparation) is documented in `docs/security/NU1903-ILCOMPILER-BROTLI.md`.
+
+Housekeeping (open): `SHA256SUMS.txt` contains a second line for `QuotaDuck-1.0.0-rc.2-win-x64.files.sha256`, but that file is not attached to the release (rc.1 attached it). The ZIP line is correct. The smallest correction is to attach the existing `files.sha256` from the final build (hash `b825a1e248dc3f5c1e2a59d496139163a89ad61ff3917695b328f07b0a061f1b`, matching the line in `SHA256SUMS.txt`), without touching the ZIP or `SHA256SUMS.txt`. Not done; it changes a published release and needs the owner's approval.
+
 ## Known limitation: cross-monitor flicker (pre-existing, open)
 
 Dragging the flyout from the 125% laptop display onto a 100% external monitor flickers rapidly once it is fully or nearly fully on the external monitor, and it eventually returns to its tray-corner position. **Owner-observed.** It happens in the published `1.0.0-rc.1` too, so it is not an rc.2 regression. Quota readings are not affected.

@@ -4,6 +4,22 @@ Status: **Parked / not approved for implementation**
 Recorded: 2026-11-09  
 Owner decision: Revisit when time permits; no deadline or release commitment.
 
+## Status after rc.2 (2026-11-11)
+
+`1.0.0-rc.2` was published on 2026-11-11 as an **unsigned prerelease** (https://github.com/PatitosFortune/quotaduck/releases/tag/v1.0.0-rc.2, tag `v1.0.0-rc.2` at `c875db64301b9db967743527c8a5fbb9729ed70b`). `1.0.0-rc.1` remains available and unchanged. Of the four original items below: **1 (Copy usage)** and **2 (visual refinements)** were implemented and shipped in rc.2; **3 (public repository and distribution review)** was only partly addressed (security policy, README privacy/security notes, the Native AOT toolchain remediation) and no full audit was done; **4 (website)** has not been started. The original text below is kept as written.
+
+### Deferred after rc.2 (parked; nothing here is authorized for implementation)
+
+| # | Item | State | Evidence / where recorded |
+|---|---|---|---|
+| 1 | Flyout flickers and returns to the tray corner when dragged between monitors of different display scale | Open. Pre-existing (also in rc.1); cause not established; one attempted fix did not help and was reverted. | Issue #9; `docs/app/RC2-ACCEPTANCE-AND-MIXED-DPI.md` |
+| 2 | Idle CPU with the flyout hidden | Accepted for rc.2, not proof of zero idle CPU. Measured during acceptance (process CPU time sampled over 60 s): about 1.3% of one core (0.11 to 0.17 CPU-seconds per 10 s over 60 s), regular and non-zero; cause not investigated; not compared with rc.1. Smallest next step: one profiler or thread-level sample of a hidden minute, then compare with rc.1. | This page |
+| 3 | Accessibility and additional scaling verification | Untested (optional): Narrator or NVDA, high contrast, reduced motion, 150% and 200% scaling, the layout on a 100% external monitor, stale/expired/missing labelling in Copy output, Windows clipboard history, the full Tab order. | `docs/app/RC2-ACCEPTANCE-AND-MIXED-DPI.md`; release notes |
+| 4 | Code signing and SmartScreen distribution | rc.1 and rc.2 are unsigned and no signing is committed (README, `SECURITY.md`). Needs an owner decision before any wider distribution. | README "Unsigned build and SmartScreen" |
+| 5 | Feedback-driven release planning | No rc.3 and no next-version scope is authorized. Plan only from real feedback and an explicit owner decision. | This page |
+
+Release housekeeping still open: the published `SHA256SUMS.txt` lists a per-file manifest (`QuotaDuck-1.0.0-rc.2-win-x64.files.sha256`) that is not attached to the release (see the publication record in `docs/app/RC2-ACCEPTANCE-AND-MIXED-DPI.md`).
+
 ## Purpose
 
 Improve QuotaDuck's usefulness for sharing Claude and Codex usage in text, assess optional visual refinements, review the already-public repository and release posture, and decide how to present the tool on patitosfortune.com.
