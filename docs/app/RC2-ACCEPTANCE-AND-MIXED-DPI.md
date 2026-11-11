@@ -17,8 +17,13 @@ Laptop 1920x1080 at 125% (primary); two external 1920x1080 monitors at 100% thro
 | Moving the flyout within the laptop display | Passed |
 | Dragging the flyout between displays of different scale | **Known limitation** (below) |
 | Win+Shift+Left / Right | No movement (not analysed) |
-| Keyboard, second launch, refresh/cooldown, memory/CPU, clean exit | Recorded in the release notes once done; anything skipped is "untested", not "passed" |
-| Narrator, high contrast, reduced motion, 150% / 200% scaling, 100% display visuals | Optional; untested unless stated otherwise |
+| Keyboard: Tab, Shift+Tab, Enter, Space (Copy buttons and Codex Refresh), Escape hides and the app stays in the tray | Passed |
+| Codex Refresh: Reading... state, data age update, cooldown blocks an immediate second read | Passed. Verified: no `codex.exe` left over (the process list equalled the pre-test baseline and none had QuotaDuck as parent). |
+| Second launch: the existing window opens, one tray icon | Passed. Verified: exactly one `QuotaDuck.exe` process remained. |
+| Memory | Passed: 82.2 MB private working set (Task Manager "Memory"; committed 124-128 MB), measured with the flyout hidden |
+| CPU while the flyout is hidden | **Accepted for rc.2, not proof of zero idle CPU**: about 1.3% of one core (0.11-0.17 CPU-seconds per 10 s over 60 s, measured), cause not investigated, not compared with rc.1 |
+| Clean exit (tray Exit) | Passed. Verified: no `QuotaDuck.exe`, no bridge process and no child process left; the state folder held only `bridge\claude-v1.json` |
+| Narrator or NVDA, high contrast, reduced motion, 150% / 200% scaling, 100% external-monitor visuals, stale/expired/missing labelling in Copy output, Win+V clipboard history, explicit full Tab order | **Not tested** (optional) |
 
 ## Known limitation: cross-monitor flicker (pre-existing, open)
 

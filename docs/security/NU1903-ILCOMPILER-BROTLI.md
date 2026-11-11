@@ -114,5 +114,5 @@ Native AOT verification detail for this run: helper 1,570,304 bytes (1.50 MB, ga
 ## Still open
 
 - No code signing: `1.0.0-rc.2` is unsigned, like rc.1. Use the published SHA-256.
-- A live Claude Code integration test of the rc.2 helper is tracked in the rc.2 acceptance checklist; until it is recorded it has not been done.
+- The live Claude Code integration test of the rc.2 helper was done by the owner on 2026-11-11 and passed (owner-observed: the card went from old to fresh without a restart; the normal Claude settings file hash was unchanged, verified). See `docs/app/RC2-ACCEPTANCE-AND-MIXED-DPI.md`. The verification builds used for it were the preparation builds, not the final release build.
 - The advisory's exact scope for the Native AOT runtime pack beyond the fields quoted above was not independently re-read in full.
