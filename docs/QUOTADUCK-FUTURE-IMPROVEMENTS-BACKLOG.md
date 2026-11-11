@@ -18,7 +18,7 @@ Owner decision: Revisit when time permits; no deadline or release commitment.
 | 4 | Code signing and SmartScreen distribution | rc.1 and rc.2 are unsigned and no signing is committed (README, `SECURITY.md`). Needs an owner decision before any wider distribution. | README "Unsigned build and SmartScreen" |
 | 5 | Feedback-driven release planning | No rc.3 and no next-version scope is authorized. Plan only from real feedback and an explicit owner decision. | This page |
 
-Release housekeeping still open: the published `SHA256SUMS.txt` lists a per-file manifest (`QuotaDuck-1.0.0-rc.2-win-x64.files.sha256`) that is not attached to the release (see the publication record in `docs/app/RC2-ACCEPTANCE-AND-MIXED-DPI.md`).
+Release housekeeping resolved: the per-file manifest (`QuotaDuck-1.0.0-rc.2-win-x64.files.sha256`) listed in the published `SHA256SUMS.txt` is now attached to the release (see the publication record in `docs/app/RC2-ACCEPTANCE-AND-MIXED-DPI.md`).
 
 ## Purpose
 
